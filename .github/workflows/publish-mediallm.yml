@@ -1,0 +1,48 @@
+name: Publish MediaLLM to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      use_testpypi:
+        description: 'Publish to TestPyPI instead'
+        type: boolean
+        default: false
+
+jobs:
+  publish-mediallm:
+    name: Publish mediallm to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.use_testpypi && 'testpypi' || 'pypi' }}
+      url: ${{ inputs.use_testpypi && 'https://test.pypi.org/p/mediallm' || 'https://pypi.org/p/mediallm' }}
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+      contents: read   # to fetch code from the repository
+      attestations: write # to generate attestations
+    defaults:
+      run:
+        working-directory: packages/mediallm
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      
+    - name: Build package
+      run: uv build
+      
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: packages/mediallm/dist/
+        repository-url: ${{ inputs.use_testpypi && 'https://test.pypi.org/legacy/' || '' }}
+        attestations: true

@@ -1,0 +1,32 @@
+name: Release Both Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_mediallm:
+        description: 'Publish mediallm package'
+        type: boolean
+        default: true
+      publish_mcp:
+        description: 'Publish mediallm-mcp package'
+        type: boolean
+        default: true
+      use_testpypi:
+        description: 'Publish to TestPyPI instead'
+        type: boolean
+        default: false
+
+jobs:
+  trigger-mediallm:
+    if: inputs.publish_mediallm
+    uses: ./.github/workflows/publish-mediallm.yml
+    with:
+      use_testpypi: ${{ inputs.use_testpypi }}
+    secrets: inherit
+
+  trigger-mcp:
+    if: inputs.publish_mcp
+    uses: ./.github/workflows/publish-mediallm-mcp.yml
+    with:
+      use_testpypi: ${{ inputs.use_testpypi }}
+    secrets: inherit

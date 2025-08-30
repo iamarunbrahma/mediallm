@@ -1,0 +1,48 @@
+name: Publish MediaLLM-MCP to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      use_testpypi:
+        description: 'Publish to TestPyPI instead'
+        type: boolean
+        default: false
+
+jobs:
+  publish-mcp:
+    name: Publish mediallm-mcp to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.use_testpypi && 'testpypi' || 'pypi' }}
+      url: ${{ inputs.use_testpypi && 'https://test.pypi.org/p/mediallm-mcp' || 'https://pypi.org/p/mediallm-mcp' }}
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+      contents: read   # to fetch code from the repository
+      attestations: write # to generate attestations
+    defaults:
+      run:
+        working-directory: packages/mediallm-mcp
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      
+    - name: Build package
+      run: uv build
+      
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: packages/mediallm-mcp/dist/
+        repository-url: ${{ inputs.use_testpypi && 'https://test.pypi.org/legacy/' || '' }}
+        attestations: true
