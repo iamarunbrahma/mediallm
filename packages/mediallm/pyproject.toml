@@ -57,6 +57,15 @@ dependencies = [
     "ollama==0.5.3"
 ]
 
+[project.optional-dependencies]
+docs = [
+    "mkdocs==1.6.1",
+    "mkdocs-material==9.5.44",
+    "mkdocstrings[python]==0.26.1",
+    "pymdown-extensions==10.11.2",
+    "mkdocs-mermaid2-plugin==1.1.1"
+]
+
 [dependency-groups]
 dev = [
     "black==25.1.0",

@@ -600,6 +600,15 @@ dependencies = [
     { name = "typer" },
 ]
 
+[package.optional-dependencies]
+docs = [
+    { name = "mkdocs" },
+    { name = "mkdocs-material" },
+    { name = "mkdocs-mermaid2-plugin" },
+    { name = "mkdocstrings", extra = ["python"] },
+    { name = "pymdown-extensions" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "black" },
@@ -619,13 +628,19 @@ docs = [
 
 [package.metadata]
 requires-dist = [
+    { name = "mkdocs", marker = "extra == 'docs'", specifier = "==1.6.1" },
+    { name = "mkdocs-material", marker = "extra == 'docs'", specifier = "==9.5.44" },
+    { name = "mkdocs-mermaid2-plugin", marker = "extra == 'docs'", specifier = "==1.1.1" },
+    { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = "==0.26.1" },
     { name = "ollama", specifier = "==0.5.3" },
     { name = "prompt-toolkit", specifier = "==3.0.48" },
     { name = "pydantic", specifier = "==2.11.0" },
+    { name = "pymdown-extensions", marker = "extra == 'docs'", specifier = "==10.11.2" },
     { name = "python-dotenv", specifier = "==1.0.1" },
     { name = "rich", specifier = "==14.1.0" },
     { name = "typer", specifier = "==0.16.1" },
 ]
+provides-extras = ["docs"]
 
 [package.metadata.requires-dev]
 dev = [
