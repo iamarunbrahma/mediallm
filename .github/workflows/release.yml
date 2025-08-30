@@ -16,17 +16,30 @@ on:
         type: boolean
         default: false
 
+permissions:
+  id-token: write   # Required for trusted publishing
+  contents: read    # Required to checkout code
+  attestations: write # Required for attestations
+
 jobs:
-  trigger-mediallm:
+  publish-mediallm:
+    name: Release MediaLLM
     if: inputs.publish_mediallm
     uses: ./.github/workflows/publish-mediallm.yml
     with:
       use_testpypi: ${{ inputs.use_testpypi }}
-    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+      attestations: write
 
-  trigger-mcp:
+  publish-mcp:
+    name: Release MediaLLM-MCP
     if: inputs.publish_mcp
     uses: ./.github/workflows/publish-mediallm-mcp.yml
     with:
       use_testpypi: ${{ inputs.use_testpypi }}
-    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+      attestations: write

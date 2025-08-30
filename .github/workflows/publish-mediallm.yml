@@ -9,6 +9,12 @@ on:
         description: 'Publish to TestPyPI instead'
         type: boolean
         default: false
+  workflow_call:
+    inputs:
+      use_testpypi:
+        description: 'Publish to TestPyPI instead'
+        type: boolean
+        default: false
 
 jobs:
   publish-mediallm:
