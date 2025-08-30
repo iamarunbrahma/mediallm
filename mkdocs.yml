@@ -1,0 +1,78 @@
+site_name: MediaLLM Documentation
+site_description: Natural language to FFmpeg, instantly and privately
+site_author: Arun Brahma
+site_url: https://mediallm.readthedocs.io
+
+repo_name: iamarunbrahma/mediallm
+repo_url: https://github.com/iamarunbrahma/mediallm
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+  - mermaid2:
+      version: 10.6.1
+  - mkdocstrings:
+      handlers:
+        python:
+          import:
+            - https://docs.python.org/3/objects.inv
+          options:
+            docstring_style: google
+            show_source: false
+            show_root_heading: true
+            show_root_members_full_path: true
+            merge_init_into_class: true
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+  - User Guide:
+    - CLI Usage: user-guide/cli.md
+    - Python API: user-guide/python-api.md
+    - MCP Server: user-guide/mcp-server.md
+  - Learn:
+    - Examples: learn/examples.md
+  - Reference:
+    - Troubleshooting: reference/troubleshooting.md
