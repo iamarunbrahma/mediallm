@@ -13,20 +13,30 @@ on:
         description: 'Publish mediallm-mcp package'
         type: boolean
         default: true
+      use_testpypi:
+        description: 'Publish to TestPyPI instead'
+        type: boolean
+        default: false
 
 jobs:
   publish-mediallm:
+    name: Publish mediallm to PyPI
     if: github.event_name == 'release' || inputs.publish_mediallm
     runs-on: ubuntu-latest
-    environment: pypi
+    environment:
+      name: ${{ inputs.use_testpypi && 'testpypi' || 'pypi' }}
+      url: ${{ inputs.use_testpypi && 'https://test.pypi.org/p/mediallm' || 'https://pypi.org/p/mediallm' }}
     permissions:
-      id-token: write
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+      contents: read   # to fetch code from the repository
+      attestations: write # to generate attestations
     defaults:
       run:
         working-directory: packages/mediallm
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -43,19 +53,27 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         packages-dir: packages/mediallm/dist/
+        repository-url: ${{ inputs.use_testpypi && 'https://test.pypi.org/legacy/' || '' }}
+        attestations: true
 
   publish-mcp:
+    name: Publish mediallm-mcp to PyPI
     if: github.event_name == 'release' || inputs.publish_mcp
     runs-on: ubuntu-latest
-    environment: pypi
+    environment:
+      name: ${{ inputs.use_testpypi && 'testpypi' || 'pypi' }}
+      url: ${{ inputs.use_testpypi && 'https://test.pypi.org/p/mediallm-mcp' || 'https://pypi.org/p/mediallm-mcp' }}
     permissions:
-      id-token: write
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+      contents: read   # to fetch code from the repository
+      attestations: write # to generate attestations
     defaults:
       run:
         working-directory: packages/mediallm-mcp
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -72,3 +90,5 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         packages-dir: packages/mediallm-mcp/dist/
+        repository-url: ${{ inputs.use_testpypi && 'https://test.pypi.org/legacy/' || '' }}
+        attestations: true
