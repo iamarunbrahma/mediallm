@@ -9,7 +9,7 @@
 
 <div align="center">
 
-**Natural language to FFmpeg, instantly and privately.**
+**Natural language to FFmpeg, instantly and privately**
 
 *Privacy-First • Local LLM • FFmpeg made effortless*
 

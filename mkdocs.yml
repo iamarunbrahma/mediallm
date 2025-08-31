@@ -1,7 +1,7 @@
 site_name: MediaLLM Documentation
 site_description: Natural language to FFmpeg, instantly and privately
 site_author: Arun Brahma
-site_url: https://mediallm.readthedocs.io
+site_url: https://mediallm.arunbrahma.com
 
 repo_name: iamarunbrahma/mediallm
 repo_url: https://github.com/iamarunbrahma/mediallm
