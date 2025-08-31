@@ -261,7 +261,7 @@ Or manually create `.cursor/mcp.json` in your project (or edit the global `~/.cu
 - `MEDIALLM_WORKSPACE` - Specify media directory (default: current working directory)
 - `MEDIALLM_MODEL` - Override LLM model (default: llama3.1:latest)
 - `MEDIALLM_OLLAMA_HOST` - Ollama server URL (default: http://localhost:11434)
-- `MEDIALLM_OUTPUT_DIR` - Output directory (default: outputs)
+- `MEDIALLM_OUTPUT_DIR` - Output directory (default: current working directory)
 
 **Available Tools:**
 - `generate_command` - Convert natural language to FFmpeg commands
