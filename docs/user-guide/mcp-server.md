@@ -61,7 +61,8 @@ Add to `.mcp.json` in your project root:
 {
   "mcpServers": {
     "mediallm-mcp": {
-      "command": "mediallm-mcp"
+      "command": "uvx",
+      "args": ["mediallm-mcp"]
     }
   }
 }
@@ -75,7 +76,8 @@ Create `.cursor/mcp.json` in your project:
 {
   "mcpServers": {
     "mediallm-mcp": {
-      "command": "mediallm-mcp"
+      "command": "uvx",
+      "args": ["mediallm-mcp"]
     }
   }
 }
@@ -118,7 +120,8 @@ You can pass environment variables to the MCP server using the `env` argument in
     {
       "mcpServers": {
         "mediallm-mcp": {
-          "command": "mediallm-mcp",
+          "command": "uvx",
+          "args": ["mediallm-mcp"],
           "env": {
             "MEDIALLM_WORKSPACE": "./media",
             "MEDIALLM_MODEL": "llama3.2:latest"
@@ -134,7 +137,8 @@ You can pass environment variables to the MCP server using the `env` argument in
     {
       "mcpServers": {
         "mediallm-mcp": {
-          "command": "mediallm-mcp",
+          "command": "uvx",
+          "args": ["mediallm-mcp"],
           "env": {
             "MEDIALLM_WORKSPACE": "/Users/username/Videos",
             "MEDIALLM_OLLAMA_HOST": "http://localhost:11434"
@@ -153,8 +157,9 @@ The MCP server exposes these tools to AI agents:
 Generate FFmpeg commands from natural language.
 
 **Parameters:**
+
 - `request` (string): Natural language description
-- `return_raw` (boolean): Return raw plan vs executable commands
+- `return_raw` (boolean): Return raw plan vs executable commands  
 - `assume_yes` (boolean): Skip confirmation prompts
 - `workspace_dir` (string): Working directory path
 
@@ -163,6 +168,7 @@ Generate FFmpeg commands from natural language.
 Scan directory for media files.
 
 **Parameters:**
+
 - `directory` (string): Directory path to scan
 
 ## Example Usage in AI Agents

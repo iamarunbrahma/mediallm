@@ -52,6 +52,7 @@ print(plan.inputs)  # Input file paths
 ```
 
 **Parameters:**
+
 - `request` (str): Natural language description
 - `return_raw` (bool): Return CommandPlan object vs executable commands
 - `assume_yes` (bool): Skip confirmation prompts
@@ -69,6 +70,7 @@ workspace = ml.scan_workspace("/path/to/media")
 ```
 
 **Returns:**
+
 ```python
 {
     "cwd": "/path/to/directory",
