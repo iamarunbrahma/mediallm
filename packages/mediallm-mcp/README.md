@@ -3,6 +3,8 @@
 MCP server that provides AI-powered media processing capabilities for FFmpeg operations through natural language commands.
 MediaLLM converts natural language requests into precise FFmpeg commands and scans workspaces for media files.
 
+**[Full Documentation](https://mediallm.arunbrahma.com/)**
+
 ## Installation
 
 ```bash

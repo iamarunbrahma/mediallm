@@ -19,6 +19,7 @@
 [![FFmpeg](https://img.shields.io/badge/requires-FFmpeg-red?style=flat-square&logo=ffmpeg)](https://ffmpeg.org)
 
 <p align="center">
+<a href="https://mediallm.arunbrahma.com/">Documentation</a> • 
 <a href="#installation">Installation</a> • 
 <a href="#quick-start">Quick Start</a> • 
 <a href="#usage">Usage</a> • 
