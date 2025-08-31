@@ -81,6 +81,69 @@ Create `.cursor/mcp.json` in your project:
 }
 ```
 
+## Environment Variables (Optional) for MCP configuration
+
+MediaLLM MCP server supports several environment variables for customization:
+
+- `MEDIALLM_WORKSPACE` - Specify media directory (default: current working directory)
+- `MEDIALLM_MODEL` - Override LLM model (default: llama3.1:latest)
+- `MEDIALLM_OLLAMA_HOST` - Ollama server URL (default: http://localhost:11434)
+- `MEDIALLM_OUTPUT_DIR` - Output directory (default: outputs)
+
+### Using Environment Variables in MCP Configurations
+
+You can pass environment variables to the MCP server using the `env` argument in your configuration:
+
+=== "Claude Desktop"
+    ```json
+    // ~/.../claude_desktop_config.json
+    {
+      "mcpServers": {
+        "mediallm-mcp": {
+          "command": "uvx",
+          "args": ["mediallm-mcp"],
+          "env": {
+            "MEDIALLM_WORKSPACE": "/path/to/your/media/files",
+            "MEDIALLM_MODEL": "llama3.2:latest",
+            "MEDIALLM_OUTPUT_DIR": "/path/to/outputs"
+          }
+        }
+      }
+    }
+    ```
+
+=== "Claude Code"
+    ```json
+    // .mcp.json in project root
+    {
+      "mcpServers": {
+        "mediallm-mcp": {
+          "command": "mediallm-mcp",
+          "env": {
+            "MEDIALLM_WORKSPACE": "./media",
+            "MEDIALLM_MODEL": "llama3.2:latest"
+          }
+        }
+      }
+    }
+    ```
+
+=== "Cursor"
+    ```json
+    // .cursor/mcp.json or ~/.cursor/mcp.json
+    {
+      "mcpServers": {
+        "mediallm-mcp": {
+          "command": "mediallm-mcp",
+          "env": {
+            "MEDIALLM_WORKSPACE": "/Users/username/Videos",
+            "MEDIALLM_OLLAMA_HOST": "http://localhost:11434"
+          }
+        }
+      }
+    }
+    ```
+
 ## Available Tools
 
 The MCP server exposes these tools to AI agents:

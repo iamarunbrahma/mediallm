@@ -50,7 +50,8 @@ Add to `claude_desktop_config.json`:
   "mcpServers": {
     "mediallm-mcp": {
       "command": "uvx",
-      "args": ["mediallm-mcp"]
+      "args": ["mediallm-mcp"],
+      "env": {}
     }
   }
 }
@@ -69,7 +70,8 @@ Add to `.mcp.json` in project root:
   "mcpServers": {
     "mediallm-mcp": {
       "command": "uvx",
-      "args": ["mediallm-mcp"]
+      "args": ["mediallm-mcp"],
+      "env": {}
     }
   }
 }
@@ -86,11 +88,19 @@ Or manually add to `.cursor/mcp.json`:
   "mcpServers": {
     "mediallm-mcp": {
       "command": "uvx",
-      "args": ["mediallm-mcp"]
+      "args": ["mediallm-mcp"],
+      "env": {}
     }
   }
 }
 ```
+
+## Environment Variables (Optional) for MCP configuration
+
+- `MEDIALLM_WORKSPACE` - Specify media directory (default: current working directory)
+- `MEDIALLM_MODEL` - Override LLM model (default: llama3.1:latest)
+- `MEDIALLM_OLLAMA_HOST` - Ollama server URL (default: http://localhost:11434)
+- `MEDIALLM_OUTPUT_DIR` - Output directory (default: outputs)
 
 ## Debugging
 
