@@ -49,15 +49,16 @@ Add to `claude_desktop_config.json`:
 {
   "mcpServers": {
     "mediallm-mcp": {
-      "command": "mediallm-mcp"
+      "command": "uvx",
+      "args": ["mediallm-mcp"]
     }
   }
 }
 ```
 
-Config file location:
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+**Config file location:**
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
 ## Accessing from Claude Code
 
@@ -67,7 +68,8 @@ Add to `.mcp.json` in project root:
 {
   "mcpServers": {
     "mediallm-mcp": {
-      "command": "mediallm-mcp"
+      "command": "uvx",
+      "args": ["mediallm-mcp"]
     }
   }
 }
@@ -75,7 +77,7 @@ Add to `.mcp.json` in project root:
 
 ## Accessing from Cursor
 
-[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=mediallm-mcp&config=eyJjb21tYW5kIjogIm1lZGlhbGxtLW1jcCIsICJhcmdzIjogW119)
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=mediallm-mcp&config=eyJjb21tYW5kIjogInV2eCIsICJhcmdzIjogWyJtZWRpYWxsbS1tY3AiXX0%3D)
 
 Or manually add to `.cursor/mcp.json`:
 
@@ -83,7 +85,8 @@ Or manually add to `.cursor/mcp.json`:
 {
   "mcpServers": {
     "mediallm-mcp": {
-      "command": "mediallm-mcp"
+      "command": "uvx",
+      "args": ["mediallm-mcp"]
     }
   }
 }

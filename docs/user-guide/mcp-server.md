@@ -33,7 +33,8 @@ Add to your `claude_desktop_config.json`:
     {
       "mcpServers": {
         "mediallm-mcp": {
-          "command": "mediallm-mcp"
+          "command": "uvx",
+          "args": ["mediallm-mcp"]
         }
       }
     }
@@ -45,7 +46,8 @@ Add to your `claude_desktop_config.json`:
     {
       "mcpServers": {
         "mediallm-mcp": {
-          "command": "mediallm-mcp"
+          "command": "uvx",
+          "args": ["mediallm-mcp"]
         }
       }
     }

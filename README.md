@@ -207,17 +207,33 @@ docker run -it --rm \
 
 ### Claude Code
 
-Works automatically when `mediallm-mcp` is installed in the active environment. Open the tools panel to discover available tools.
-
-### Claude Desktop
-
-Add to your `claude_desktop_config.json`:
+Add to `.mcp.json` in your project root:
 
 ```json
 {
   "mcpServers": {
     "mediallm-mcp": {
-      "command": "mediallm-mcp"
+      "command": "uvx",
+      "args": ["mediallm-mcp"]
+    }
+  }
+}
+```
+
+### Claude Desktop
+
+Add to your `claude_desktop_config.json`:
+
+**Config file location:**
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "mediallm-mcp": {
+      "command": "uvx",
+      "args": ["mediallm-mcp"]
     }
   }
 }
@@ -225,7 +241,7 @@ Add to your `claude_desktop_config.json`:
 
 ### Cursor
 
-[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=mediallm-mcp&config=eyJjb21tYW5kIjogIm1lZGlhbGxtLW1jcCIsICJhcmdzIjogW119)
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=mediallm-mcp&config=eyJjb21tYW5kIjogInV2eCIsICJhcmdzIjogWyJtZWRpYWxsbS1tY3AiXX0%3D)
 
 Or manually create `.cursor/mcp.json` in your project (or edit the global `~/.cursor/mcp.json`):
 
@@ -233,7 +249,8 @@ Or manually create `.cursor/mcp.json` in your project (or edit the global `~/.cu
 {
   "mcpServers": {
     "mediallm-mcp": {
-      "command": "mediallm-mcp"
+      "command": "uvx",
+      "args": ["mediallm-mcp"]
     }
   }
 }
