@@ -126,7 +126,7 @@ Create a `.env` file or set environment variables:
 ```bash
 MEDIALLM_MODEL=llama3.1:latest
 MEDIALLM_OLLAMA_HOST=http://localhost:11434
-MEDIALLM_OUTPUT_PATH=./outputs
+MEDIALLM_OUTPUT_DIR=./outputs
 MEDIALLM_DRY_RUN=false
 ```
 

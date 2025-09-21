@@ -12,8 +12,6 @@ from typing import Any, Dict, Optional
 
 from fastmcp import FastMCP
 from mediallm import MediaLLM
-from starlette.requests import Request
-from starlette.responses import PlainTextResponse
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +20,6 @@ mcp = FastMCP("mediallm-mcp")
 _mediallm_instances: Dict[str, MediaLLM] = {}
 
 
-@mcp.custom_route("/health", methods=["GET"])
-async def health_check(_request: Request) -> PlainTextResponse:
-    """Lightweight health endpoint for container probes."""
-    return PlainTextResponse("OK")
 
 
 def get_mediallm_instance(working_dir: Optional[str] = None) -> MediaLLM:
@@ -60,17 +54,13 @@ async def generate_command(
     return_raw: bool = False,
     assume_yes: bool = True,
     workspace_dir: Optional[str] = None,
+    output_dir: Optional[str] = None
 ) -> Any:
     """Convert natural language to FFmpeg commands."""
     mediallm = get_mediallm_instance(workspace_dir)
-    output_path = os.environ.get("MEDIALLM_OUTPUT_PATH", "").strip()
-    if output_path:
-        try:
-            output_dir = Path(output_path).expanduser()
-        except Exception:
-            output_dir = None
-    else:
-        output_dir = None
+    output_dir = os.environ.get("MEDIALLM_OUTPUT_DIR", "").strip()
+    output_dir = Path(output_dir).expanduser() if output_dir else None
+    
 
     return await execute_sync(
         mediallm.generate_command,

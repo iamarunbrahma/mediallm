@@ -153,7 +153,7 @@ MediaLLM works out-of-the-box with sensible defaults. Customize only if needed:
 
 **Common Adjustments:**
 - `MEDIALLM_MODEL` - Switch between different Ollama models (default: llama3.1:latest)
-- `MEDIALLM_OUTPUT_PATH` - Change where converted files are saved (default: current directory)
+- `MEDIALLM_OUTPUT_DIR` - Change where converted files are saved (default: current directory)
 
 **Advanced Settings:**
 - `MEDIALLM_OLLAMA_HOST` - Connect to Ollama on a different machine (default: http://localhost:11434)
@@ -206,7 +206,6 @@ docker run -it --rm \
   mediallm-mcp
 
 # MCP endpoint (default path): http://localhost:8080/mcp
-# Health check endpoint:       http://localhost:8080/health
 # Customize path via CLI:      mediallm-mcp --http --path /api/mcp
 ```
 
@@ -266,7 +265,7 @@ Or manually create `.cursor/mcp.json` in your project (or edit the global `~/.cu
 - `MEDIALLM_WORKSPACE` - Specify media directory (default: current working directory)
 - `MEDIALLM_MODEL` - Override LLM model (default: llama3.1:latest)
 - `MEDIALLM_OLLAMA_HOST` - Ollama server URL (default: http://localhost:11434)
-- `MEDIALLM_OUTPUT_PATH` - Output directory (default: current working directory)
+- `MEDIALLM_OUTPUT_DIR` - Output directory (default: current working directory)
 
 **Available Tools:**
 - `generate_command` - Convert natural language to FFmpeg commands

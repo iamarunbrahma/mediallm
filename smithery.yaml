@@ -13,6 +13,6 @@ env:
   MEDIALLM_WORKSPACE: "/workspace"
   MEDIALLM_MODEL: "llama3.1:latest"
   MEDIALLM_OLLAMA_HOST: "http://localhost:11434"
-  MEDIALLM_OUTPUT_PATH: "/workspace"
+  MEDIALLM_OUTPUT_DIR: "/workspace"
 
 
