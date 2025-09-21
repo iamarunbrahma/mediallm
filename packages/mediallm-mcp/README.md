@@ -21,11 +21,14 @@ uv add mediallm-mcp
 # STDIO (default)
 mediallm-mcp
 
-# Streamable HTTP
+# Streamable HTTP (default path: /mcp)
 mediallm-mcp --http --port 3001
 
 # SSE
 mediallm-mcp --sse --port 3001
+
+# Optional: customize MCP HTTP endpoint path (default: /mcp)
+mediallm-mcp --http --port 3001 --path /api/mcp
 ```
 
 ## Running in Docker
@@ -35,10 +38,14 @@ mediallm-mcp --sse --port 3001
 cd packages/mediallm-mcp
 docker build -t mediallm-mcp .
 
-# Run with media directory mounted
+# Run with media directory mounted and HTTP port exposed
 docker run -it --rm \
+  -p 8080:8080 \
   -v /path/to/media:/workspace \
   mediallm-mcp
+
+# MCP endpoint (default): http://localhost:8080/mcp
+# Health check:           http://localhost:8080/health
 ```
 
 ## Accessing from Claude Desktop
@@ -109,3 +116,16 @@ Use MCP inspector to test the connection:
 ```bash
 npx @modelcontextprotocol/inspector mediallm-mcp
 ```
+
+### MCP Inspector: Request timed out (-32001)
+
+If testing long-running tools like `generate_command` results in an error such as: "MCP error -32001: Request timed out", increase the Inspector client timeouts in its Configuration panel:
+
+- Request Timeout: 300000 (5 minutes)
+- Reset Timeout on Progress: true
+- Maximum Total Timeout: 900000 (15 minutes)
+
+These values follow MCP guidance to allow configurable per-request timeouts and to optionally reset timeouts on progress while still enforcing a maximum overall timeout. See the MCP spec section on timeouts and the Inspector discussion about default client timeouts for context.
+
+- Spec: [MCP Lifecycle – Timeouts](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle#timeouts)
+- Inspector discussion: [Set longer request times for Inspector client](https://github.com/modelcontextprotocol/inspector/issues/142)

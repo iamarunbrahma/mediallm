@@ -18,7 +18,7 @@ mediallm-mcp
 mediallm-mcp --http --port 3001
 
 # SSE transport  
-mediallm-mcp --sse --port 3002
+mediallm-mcp --sse --port 3001
 ```
 
 ## AI Client Integration
@@ -203,9 +203,23 @@ The MCP server includes a Dockerfile for containerized deployments:
 cd packages/mediallm-mcp
 docker build -t mediallm-mcp .
 
-# Run container
-docker run -v /path/to/media:/workspace mediallm-mcp
+# Run container with HTTP exposed and media volume mounted
+docker run -it --rm \
+  -p 8080:8080 \
+  -v /path/to/media:/workspace \
+  mediallm-mcp
+
+# MCP endpoint (default): http://localhost:8080/mcp
+# Health check:           http://localhost:8080/health
 ```
+
+## MCP Inspector Timeout
+
+If you see "MCP error -32001: Request timed out" in MCP Inspector, set:
+
+- Request Timeout - 300000
+- Reset Timeout on Progress - True
+- Maximum Total Timeout - 900000
 
 ## Next Steps
 

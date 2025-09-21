@@ -1,0 +1,18 @@
+runtime: "container"
+
+startCommand:
+  type: "http"
+
+build:
+  dockerfile: "packages/mediallm-mcp/Dockerfile"
+  dockerBuildPath: "packages/mediallm-mcp"
+
+env:
+  PYTHONUNBUFFERED: "1"
+  FFMPEG_PATH: "/usr/bin/ffmpeg"
+  MEDIALLM_WORKSPACE: "/workspace"
+  MEDIALLM_MODEL: "llama3.1:latest"
+  MEDIALLM_OLLAMA_HOST: "http://localhost:11434"
+  MEDIALLM_OUTPUT_DIR: "/workspace"
+
+

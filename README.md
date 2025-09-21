@@ -199,10 +199,15 @@ mediallm-mcp --http --port 3001
 cd packages/mediallm-mcp
 docker build -t mediallm-mcp .
 
-# Run with volume mounting for media file access
+# Run with volume mounting and port mapping for HTTP access
 docker run -it --rm \
+  -p 8080:8080 \
   -v /path/to/your/media:/workspace \
   mediallm-mcp
+
+# MCP endpoint (default path): http://localhost:8080/mcp
+# Health check endpoint:       http://localhost:8080/health
+# Customize path via CLI:      mediallm-mcp --http --path /api/mcp
 ```
 
 ### Claude Code
@@ -283,6 +288,14 @@ If the server is not detected:
 - Ensure the command is available: `mediallm-mcp --help`
 - Restart the client (Claude Desktop, Claude Code, or Cursor)
 - Verify Ollama is running if using local LLMs
+
+### MCP Inspector Timeout
+
+If you see "MCP error -32001: Request timed out" in MCP Inspector, set:
+
+- Request Timeout - 300000
+- Reset Timeout on Progress - True
+- Maximum Total Timeout - 900000
 
 
 ## Contributing
