@@ -165,10 +165,11 @@ def display_completion_summary(output_dir: Path | None = None) -> None:
         logger.warning(f"Unexpected error in completion summary: {e}")
 
 
+from ..analysis.workspace_scanner import discover_media  # noqa: E402
+
+
 def _scan_output_directory(output_dir: Path) -> dict:
     """Scan output directory for media files."""
-    from ..analysis.workspace_scanner import discover_media
-
     return discover_media(cwd=output_dir, show_summary=False)
 
 

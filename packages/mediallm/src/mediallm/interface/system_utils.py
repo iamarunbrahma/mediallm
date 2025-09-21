@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import logging
+import select
 import sys
+import termios
 import time
 from typing import Final
 
@@ -55,9 +57,6 @@ def _delay_for_cleanup() -> None:
 def _flush_input_stream() -> None:
     """Clear any pending input on Unix-like systems."""
     try:
-        import select
-        import termios
-
         if hasattr(select, "select") and sys.stdin.isatty():
             termios.tcflush(sys.stdin, termios.TCIFLUSH)
     except (ImportError, OSError, AttributeError):
@@ -121,7 +120,7 @@ def _clean_error_text(error_msg: str) -> str:
 
 def setup_logging(verbose: bool) -> None:
     """Setup logging configuration."""
-    log_level = logging.DEBUG if verbose else logging.INFO
+    log_level = logging.DEBUG if verbose else logging.CRITICAL
 
     logging.basicConfig(
         level=log_level,
@@ -129,7 +128,6 @@ def setup_logging(verbose: bool) -> None:
         handlers=[logging.StreamHandler()],
     )
 
-    # Suppress verbose logging from third-party libraries unless in debug mode
     if not verbose:
         _silence_noisy_libraries()
 

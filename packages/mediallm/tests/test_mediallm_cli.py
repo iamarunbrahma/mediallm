@@ -257,6 +257,8 @@ class TestMediaLLMAPI:
 
             assert mediallm.working_dir == Path.cwd()
             assert mediallm.timeout == 60
+
+            mediallm._get_llm()
             mock_ollama.Client.assert_called_once_with(host="http://localhost:11434")
 
     def test_mediallm_init_custom_params(self, sample_workspace):
@@ -283,6 +285,8 @@ class TestMediaLLMAPI:
             assert mediallm.working_dir == Path(custom_workspace)
             assert mediallm.timeout == 120
             assert mediallm.workspace == sample_workspace
+
+            mediallm._get_llm()
             mock_ollama.Client.assert_called_once_with(host="http://localhost:11435")
 
     def test_mediallm_init_failure(self):
@@ -292,7 +296,7 @@ class TestMediaLLMAPI:
 
         with patch.dict("sys.modules", {"ollama": mock_ollama}):
             with pytest.raises(RuntimeError) as exc_info:
-                MediaLLM()
+                MediaLLM()._get_llm()
 
             assert "Failed to initialize Ollama provider" in str(exc_info.value)
             assert "ollama serve" in str(exc_info.value)
@@ -463,7 +467,10 @@ class TestOllamaIntegration:
         mock_ollama = Mock()
         mock_ollama.Client.side_effect = Exception("Connection refused")
 
-        with patch.dict("sys.modules", {"ollama": mock_ollama}), pytest.raises(Exception):
+        with (
+            patch.dict("sys.modules", {"ollama": mock_ollama}),
+            pytest.raises(Exception),
+        ):
             OllamaAdapter("http://localhost:11434", "llama3.1:latest")
 
     def test_ollama_adapter_model_not_available(self, mock_ollama_client):

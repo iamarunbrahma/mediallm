@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import random
 import signal
 import sys
@@ -212,7 +213,7 @@ class LLMSpinner:
     def _setup_signal_handler(self) -> None:
         """Setup signal handler for Ctrl+C interrupts."""
 
-        def sigint_handler(signum, frame):
+        def sigint_handler(_signum, _frame):
             self.interrupted = True
             self.interrupt_reason = "Ctrl+C"
             if self.interrupt_callback:
@@ -220,11 +221,8 @@ class LLMSpinner:
                     self.interrupt_callback()
             self.stop()
 
-        try:
+        with contextlib.suppress(ValueError, OSError):
             self.original_sigint_handler = signal.signal(signal.SIGINT, sigint_handler)
-        except (ValueError, OSError):
-            # Signal handling might not work in some contexts (e.g., threads)
-            pass
 
     def _restore_signal_handler(self) -> None:
         """Restore the original signal handler."""
@@ -305,18 +303,19 @@ class LLMSpinner:
         if self.kb_app:
             try:
                 # Only try to exit if the app is actually running
+                should_exit = False
                 with self._thread_lock:
                     if self._app_running:
-                        try:
-                            self.kb_app.exit()
-                        except Exception as e:
-                            # Ignore "Application is not running" and similar errors
-                            error_msg = str(e).lower()
-                            if "application is not running" not in error_msg:
-                                # Log unexpected errors but don't fail
-                                import logging
-
-                                logging.getLogger(__name__).debug(f"Error exiting keyboard app: {e}")
+                        should_exit = True
+                if should_exit:
+                    try:
+                        self.kb_app.exit()
+                    except Exception as e:
+                        # Ignore "Application is not running" and similar errors
+                        error_msg = str(e).lower()
+                        if "application is not running" not in error_msg:
+                            # Log unexpected errors but don't fail
+                            logging.getLogger(__name__).debug(f"Error exiting keyboard app: {e}")
             except Exception:
                 # Ignore all errors during cleanup
                 pass

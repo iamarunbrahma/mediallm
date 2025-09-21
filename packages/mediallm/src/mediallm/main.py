@@ -2,6 +2,7 @@
 # Author: Arun Brahma
 
 import sys
+import traceback
 
 try:
     from mediallm.interface.terminal_interface import app as terminal_app
@@ -26,8 +27,6 @@ def main() -> None:
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
         if __debug__:  # Show traceback in debug mode
-            import traceback
-
             traceback.print_exc()
         sys.exit(1)
 
@@ -49,11 +48,15 @@ def _check_required_modules() -> None:
     ]
 
     missing_modules = []
-    for module_name, description in required_modules:
+
+    def _try_import(name: str, desc: str) -> None:
         try:
-            __import__(module_name)
+            __import__(name)
         except ImportError:
-            missing_modules.append(f"{module_name} ({description})")
+            missing_modules.append(f"{name} ({desc})")
+
+    for module_name, description in required_modules:
+        _try_import(module_name, description)
 
     if missing_modules:
         print("Error: Missing required dependencies:", file=sys.stderr)

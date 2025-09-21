@@ -23,32 +23,20 @@ Install uv (optional, recommended): `curl -LsSf https://astral.sh/uv/install.sh 
 
 #### A. Set up MediaLLM package (`packages/mediallm`)
 
-Using uv:
+Using uv only (recommended):
 ```bash
 cd packages/mediallm
-uv sync --dev
-uv pip install -e .
-```
-
-Using pip:
-```bash
-cd packages/mediallm
-pip install -e .
+uv sync --all-extras
+source .venv/bin/activate
 ```
 
 #### B. Set up MCP server package (`packages/mediallm-mcp`)
 
-Using uv:
+Using uv only (recommended):
 ```bash
 cd packages/mediallm-mcp
-uv sync --dev
-uv pip install -e .
-```
-
-Using pip:
-```bash
-cd packages/mediallm-mcp
-pip install -e .
+uv sync --all-extras
+source .venv/bin/activate
 ```
 
 ### 3. Verify Setup

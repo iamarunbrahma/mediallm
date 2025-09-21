@@ -30,7 +30,7 @@ class MediaTaskProcessor:
         except Exception:
             return str(value)
 
-        total_ms = int(round(seconds_float * cls._MS_PER_SECOND))
+        total_ms = round(seconds_float * cls._MS_PER_SECOND)
         ms = total_ms % cls._MS_PER_SECOND
         total_seconds = total_ms // cls._MS_PER_SECOND
         s = total_seconds % cls._SECONDS_PER_MINUTE

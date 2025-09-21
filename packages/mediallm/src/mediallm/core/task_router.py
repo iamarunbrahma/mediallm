@@ -7,11 +7,13 @@ import logging
 from pathlib import Path
 
 from ..processing.media_file_handler import expand_globs
+from ..processing.media_file_handler import is_safe_path
 from ..utils.data_models import Action
 from ..utils.data_models import CommandEntry
 from ..utils.data_models import CommandPlan
 from ..utils.data_models import MediaIntent
 from ..utils.exceptions import ConstructionError
+from ..utils.media_validator import validate_media_file
 from .file_type_detector import FileTypeDetector
 from .filter_validator import FilterValidator
 from .output_generator import OutputGenerator
@@ -58,10 +60,6 @@ class TaskDispatcher:
             logger.debug(f"Glob expansion found {len(globbed)} additional files")
             derived_inputs.extend(globbed)
 
-        # Validate all input paths for security
-        from ..processing.media_file_handler import is_safe_path
-        from ..utils.media_validator import validate_media_file
-
         validated_inputs = []
         media_validation_errors = []
 
@@ -85,7 +83,9 @@ class TaskDispatcher:
         if not validated_inputs:
             logger.debug("No valid input files found after validation")
             raise ConstructionError(
-                "No safe input files found. Please ensure: (1) input files exist in the current directory, (2) file paths are correct and safe, (3) no path traversal attempts (e.g., ../), and (4) glob patterns match existing files. Try 'ls' to check available files."
+                "No safe input files found. Please ensure: (1) input files exist in the current directory, (2) "
+                "file paths are correct and safe, (3) no path traversal attempts (e.g., ../), and (4) glob "
+                "patterns match existing files. Try 'ls' to check available files."
             )
 
         logger.debug(f"Successfully validated {len(validated_inputs)} input files")
@@ -157,49 +157,44 @@ class TaskDispatcher:
         logger.debug(f"Successfully processed {len(entries)} command entries")
         return entries
 
-    def _build_action_args(self, task: MediaIntent, input_path: Path) -> list[str]:
+    def _build_action_args(self, task: MediaIntent, _input_path: Path) -> list[str]:
         """Build FFmpeg arguments for specific action."""
         logger.debug(f"Building args for action: {task.action.value if task.action else 'unknown'}")
-        args: list[str] = []
 
-        if task.action == Action.convert:
-            args.extend(self._build_convert_args(task))
-        elif task.action == Action.extract_audio:
-            args.extend(["-q:a", "0", "-map", "a"])
-        elif task.action == Action.remove_audio:
-            args.extend(["-an"])
+        if task.action is None:
+            raise ConstructionError("Missing action in task")
+
+        action_builders: dict[Action, callable[[MediaIntent], list[str]]] = {
+            Action.convert: self._build_convert_args,
+            Action.trim: self._build_trim_args,
+            Action.segment: self._build_trim_args,
+            Action.thumbnail: self._build_thumbnail_args,
+            Action.frames: self._build_frames_args,
+            Action.compress: self._build_compress_args,
+            Action.format_convert: self._build_format_convert_args,
+            Action.extract_frames: self._build_extract_frames_args,
+            Action.burn_subtitles: self._build_burn_subtitles_args,
+            Action.slideshow: self._build_slideshow_args,
+        }
+
+        if task.action == Action.extract_audio:
+            return ["-q:a", "0", "-map", "a"]
+        if task.action == Action.remove_audio:
+            base = ["-an"]
             if task.video_codec:
-                args.extend(["-c:v", task.video_codec])
-        elif task.action == Action.trim:
-            args.extend(self._build_trim_args(task))
-        elif task.action == Action.segment:
-            args.extend(self._build_trim_args(task))  # Same as trim
-        elif task.action == Action.thumbnail:
-            args.extend(self._build_thumbnail_args(task))
-        elif task.action == Action.frames:
-            args.extend(self._build_frames_args(task))
-        elif task.action == Action.compress:
-            args.extend(self._build_compress_args(task))
-        elif task.action == Action.format_convert:
-            args.extend(self._build_format_convert_args(task))
-        elif task.action == Action.extract_frames:
-            args.extend(self._build_extract_frames_args(task))
-        elif task.action == Action.burn_subtitles:
-            args.extend(self._build_burn_subtitles_args(task))
-        elif task.action == Action.extract_subtitles:
-            args.extend(["-map", "0:s:0", "-c:s", "srt"])
-        elif task.action == Action.slideshow:
-            args.extend(self._build_slideshow_args(task))
-        else:
-            raise ConstructionError(
-                f"Unsupported action: {task.action}. "
-                f"Supported actions are: convert, extract_audio, remove_audio, "
-                f"trim, segment, thumbnail, frames, compress, overlay, format_convert, extract_frames, "
-                f"burn_subtitles, extract_subtitles, slideshow. "
-                f"Please rephrase your request using supported operations."
-            )
+                base.extend(["-c:v", task.video_codec])
+            return base
+        if task.action == Action.extract_subtitles:
+            return ["-map", "0:s:0", "-c:s", "srt"]
 
-        return args
+        builder = action_builders.get(task.action)
+        if builder is None:
+            raise ConstructionError(
+                "Unsupported action: {action}. Supported: convert, extract_audio, remove_audio, trim, segment, "
+                "thumbnail, frames, compress, overlay, format_convert, extract_frames, burn_subtitles, "
+                "extract_subtitles, slideshow. Please rephrase your request using supported operations."
+            )
+        return builder(task)
 
     def _build_convert_args(self, task: MediaIntent) -> list[str]:
         """Build arguments for convert action."""
@@ -347,38 +342,40 @@ class TaskDispatcher:
         logger.debug(
             f"Building summary for {task.action.value if task.action else 'unknown'} action with {len(entries)} entries"
         )
+
+        count = len(entries)
         if task.action == Action.convert:
-            return f"Convert {len(entries)} file(s) to mp4 h264+aac with optional scale {task.scale or '-'}"
+            return f"Convert {count} file(s) to mp4 h264+aac with optional scale {task.scale or '-'}"
         if task.action == Action.extract_audio:
-            return f"Extract audio from {len(entries)} file(s) to mp3"
+            return f"Extract audio from {count} file(s) to mp3"
         if task.action == Action.trim:
             end_or_duration = f"end={task.end}" if task.end else f"duration={task.duration or '-'}"
-            return f"Trim {len(entries)} file(s) start={task.start or '0'} {end_or_duration}"
+            return f"Trim {count} file(s) start={task.start or '0'} {end_or_duration}"
         if task.action == Action.thumbnail:
-            return f"Thumbnail from {len(entries)} file(s) at {task.start or '00:00:10'}"
+            return f"Thumbnail from {count} file(s) at {task.start or '00:00:10'}"
         if task.action == Action.overlay:
-            return f"Overlay {task.overlay_path} on {len(entries)} file(s)"
+            return f"Overlay {task.overlay_path} on {count} file(s)"
         if task.action == Action.compress:
-            return f"Compress {len(entries)} file(s) with libx265 CRF {task.crf or 28}"
+            return f"Compress {count} file(s) with libx265 CRF {task.crf or 28}"
         if task.action == Action.frames:
-            return f"Extract frames from {len(entries)} file(s) with fps {task.fps or '1/5'}"
+            return f"Extract frames from {count} file(s) with fps {task.fps or '1/5'}"
         if task.action == Action.format_convert:
             format_info = f"format={task.format}" if task.format else "default format"
             video_info = f"video={task.video_codec}" if task.video_codec else "default video"
             audio_info = f"audio={task.audio_codec}" if task.audio_codec else "default audio"
-            return f"Convert {len(entries)} file(s) to {format_info} with {video_info} and {audio_info}"
+            return f"Convert {count} file(s) to {format_info} with {video_info} and {audio_info}"
         if task.action == Action.extract_frames:
             fps_info = f"fps={task.fps}" if task.fps else "fps=1/5"
-            return f"Extract frames from {len(entries)} file(s) with {fps_info}"
+            return f"Extract frames from {count} file(s) with {fps_info}"
         if task.action == Action.burn_subtitles:
             subtitle_info = f"subtitles={task.subtitle_path.name}" if task.subtitle_path else "no subtitle file"
-            return f"Burn {subtitle_info} into {len(entries)} video file(s)"
+            return f"Burn {subtitle_info} into {count} video file(s)"
         if task.action == Action.extract_subtitles:
-            return f"Extract subtitles from {len(entries)} video file(s) to SRT format"
+            return f"Extract subtitles from {count} video file(s) to SRT format"
         if task.action == Action.slideshow:
             duration_info = f"duration={task.duration}s per image" if task.duration else "default timing"
-            return f"Create slideshow from {len(entries)} image(s) with {duration_info}"
-        return f"Action {task.action} on {len(entries)} file(s)"
+            return f"Create slideshow from {count} image(s) with {duration_info}"
+        return f"Action {task.action} on {count} file(s)"
 
 
 # Module-level function for backward compatibility

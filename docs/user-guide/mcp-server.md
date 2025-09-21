@@ -90,7 +90,7 @@ MediaLLM MCP server supports several environment variables for customization:
 - `MEDIALLM_WORKSPACE` - Specify media directory (default: current working directory)
 - `MEDIALLM_MODEL` - Override LLM model (default: llama3.1:latest)
 - `MEDIALLM_OLLAMA_HOST` - Ollama server URL (default: http://localhost:11434)
-- `MEDIALLM_OUTPUT_DIR` - Output directory (default: current working directory)
+- `MEDIALLM_OUTPUT_PATH` - Output directory (default: current working directory)
 
 ### Using Environment Variables in MCP Configurations
 
@@ -107,7 +107,7 @@ You can pass environment variables to the MCP server using the `env` argument in
           "env": {
             "MEDIALLM_WORKSPACE": "/path/to/your/media/files",
             "MEDIALLM_MODEL": "llama3.2:latest",
-            "MEDIALLM_OUTPUT_DIR": "/path/to/outputs"
+            "MEDIALLM_OUTPUT_PATH": "/path/to/outputs"
           }
         }
       }

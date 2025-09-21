@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 import typer
 from rich.panel import Panel
 
+from ..analysis.prompt_enhancer import get_prompt_suggestions
+from ..analysis.prompt_enhancer import refine_input
 from ..analysis.workspace_scanner import discover_media
 from ..core.command_builder import construct_operations
 from ..core.llm import LLM
@@ -19,7 +21,12 @@ from ..interface.command_handler import CommandHandler
 from ..interface.confirm_dialog import confirm_prompt
 from ..interface.interactive_prompt import create_input_box
 from ..interface.spinner import show_llm_spinner
+from ..processing.command_executor import detect_overwrites
+from ..processing.command_executor import preview
+from ..processing.command_executor import preview_modified_commands
+from ..processing.command_executor import run
 from ..processing.media_file_handler import most_recent_file
+from ..utils.config import load_config
 from ..utils.exceptions import BuildError
 from ..utils.exceptions import ConfigError
 from ..utils.exceptions import ConstructionError
@@ -78,8 +85,8 @@ def nl_command(
     ) as e:
         reset_terminal_state()
         clean_msg = get_clean_error_message(e)
-        console.print(f"[red]× Error:[/red] {clean_msg}")
-        raise typer.Exit(1)
+        console.print(f"[red]x Error:[/red] {clean_msg}")
+        raise typer.Exit(1) from e
     except Exception as e:
         reset_terminal_state()
         error_msg = str(e).lower()
@@ -91,16 +98,14 @@ def nl_command(
                 "event loop",
             ]
         ):
-            console.print("[red]× Error:[/red] Terminal session corrupted, please restart the application")
+            console.print("[red]x Error:[/red] Terminal session corrupted, please restart the application")
         else:
-            console.print(f"[red]× Unexpected error:[/red] {e!s}")
-        raise typer.Exit(1)
+            console.print(f"[red]x Unexpected error:[/red] {e!s}")
+        raise typer.Exit(1) from e
 
 
 def _run_interactive_mode() -> None:
     """Run interactive mode without context (standalone)."""
-    from ..utils.config import load_config
-
     setup_logging(False)  # Non-verbose for standalone mode
 
     try:
@@ -110,7 +115,7 @@ def _run_interactive_mode() -> None:
         _run_interactive_session(cfg, context, llm, False)
     except Exception as e:
         reset_terminal_state()
-        console.print(f"[red]× Error:[/red] {get_clean_error_message(e)}")
+        console.print(f"[red]x Error:[/red] {get_clean_error_message(e)}")
 
 
 def _handle_single_command(prompt: str, context: dict, llm: LLM, cfg: AppConfig, assume_yes: bool) -> int:
@@ -119,7 +124,7 @@ def _handle_single_command(prompt: str, context: dict, llm: LLM, cfg: AppConfig,
     processed_prompt, referenced_files = parse_file_references(prompt)
 
     # Pre-LLM file validation
-    existing_files, missing_files = validate_mentioned_files(processed_prompt)
+    _existing_files, missing_files = validate_mentioned_files(processed_prompt)
     if missing_files:
         if len(missing_files) == 1:
             raise ValueError(f"File not found: {missing_files[0]}")
@@ -145,11 +150,6 @@ def _handle_single_command(prompt: str, context: dict, llm: LLM, cfg: AppConfig,
 
 def _execute_commands(commands: list, cfg: AppConfig, assume_yes: bool) -> int:
     """Execute commands with preview and confirmation."""
-    from ..processing.command_executor import detect_overwrites
-    from ..processing.command_executor import preview
-    from ..processing.command_executor import preview_modified_commands
-    from ..processing.command_executor import run
-
     # Always show preview before asking for confirmation
     preview(commands)
 
@@ -207,7 +207,8 @@ def _run_interactive_session(cfg: AppConfig, context: dict, llm: LLM, assume_yes
     console.print("[dim]💡 Type [cyan]/help[/cyan] for available commands, or start typing your request[/dim]")
     console.print("[dim]💡 Use [cyan]@[/cyan] to reference files (e.g., convert @video.mp4 to audio.mp3)[/dim]")
     console.print(
-        "[dim]💡 Press [cyan]TAB[/cyan] to autocomplete commands/file references and [cyan]ENTER[/cyan] to submit your command[/dim]"
+        "[dim]💡 Press [cyan]TAB[/cyan] to autocomplete commands/file references and "
+        "[cyan]ENTER[/cyan] to submit your command[/dim]"
     )
     console.print()
 
@@ -279,7 +280,7 @@ def _process_interactive_command(line: str, context: dict, llm: LLM, cfg: AppCon
     except ValueError as e:
         reset_terminal_state()
         clean_msg = get_clean_error_message(e)
-        console.print(f"[red]× Error:[/red] {clean_msg}")
+        console.print(f"[red]x Error:[/red] {clean_msg}")
         console.print()
     except (
         ParseError,
@@ -290,7 +291,7 @@ def _process_interactive_command(line: str, context: dict, llm: LLM, cfg: AppCon
     ) as e:
         reset_terminal_state()
         clean_msg = get_clean_error_message(e)
-        console.print(f"[red]× Error:[/red] {clean_msg}")
+        console.print(f"[red]x Error:[/red] {clean_msg}")
         console.print()
     except KeyboardInterrupt as e:
         reset_terminal_state()
@@ -311,7 +312,7 @@ def _make_llm(cfg: AppConfig) -> LLM:
 def explain_command(ffmpeg_command: str | None = None) -> None:
     """Explain an existing ffmpeg command in natural language."""
     if not ffmpeg_command:
-        console.print("[red]× Error:[/red] Provide an ffmpeg command to explain.")
+        console.print("[red]x Error:[/red] Provide an ffmpeg command to explain.")
         raise typer.Exit(2)
     console.print("[bold green]⚠️ Warning:[/bold green] Explanation is not implemented in MVP.")
 
@@ -322,15 +323,13 @@ def enhance_command(
 ) -> None:
     """Enhance and analyze a user prompt for better LLM understanding."""
     if not prompt:
-        console.print("[red]× Error:[/red] Provide a prompt to enhance.")
+        console.print("[red]x Error:[/red] Provide a prompt to enhance.")
         raise typer.Exit(2)
 
     try:
-        from ..analysis.prompt_enhancer import enhance_user_prompt
-
         # Enhance the prompt using context-aware processing
         context = discover_media()
-        enhanced = enhance_user_prompt(prompt, context)
+        enhanced = refine_input(prompt, context)
 
         # Display original and enhanced prompts in a panel
         prompt_panel = Panel(
@@ -349,14 +348,12 @@ def enhance_command(
 
     except Exception as e:
         clean_msg = get_clean_error_message(e)
-        console.print(f"[red]× Error:[/red] {clean_msg}")
+        console.print(f"[red]x Error:[/red] {clean_msg}")
         raise typer.Exit(1) from e
 
 
 def _display_suggestions(prompt: str) -> None:
     """Display improvement suggestions for prompt."""
-    from ..analysis.prompt_enhancer import get_prompt_suggestions
-
     suggestions = get_prompt_suggestions(prompt)
     if suggestions:
         suggestion_table = TableFactory.create_suggestion_table("Improvement Suggestions")

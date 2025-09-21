@@ -231,13 +231,15 @@ class MediaFileValidator:
         expected_category = self.extension_to_category[file_extension]
 
         # Check if primary MIME type matches expected category
-        if primary_mime in ValidationConstants.MIME_TYPE_CATEGORIES:
-            if primary_mime != expected_category:
-                return ValidationResult(
-                    is_valid=False,
-                    media_type=None,
-                    error_message=f"File type mismatch: {file_path.name} appears to be {primary_mime} but has {expected_category} extension",
-                )
+        if primary_mime in ValidationConstants.MIME_TYPE_CATEGORIES and primary_mime != expected_category:
+            return ValidationResult(
+                is_valid=False,
+                media_type=None,
+                error_message=(
+                    f"File type mismatch: {file_path.name} appears to be {primary_mime} "
+                    f"but has {expected_category} extension"
+                ),
+            )
 
         return ValidationResult(is_valid=True, media_type=None, error_message=None)
 

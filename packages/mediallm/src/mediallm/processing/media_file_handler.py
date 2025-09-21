@@ -156,43 +156,43 @@ class MediaFileHandler:
             if not cls._is_safe_glob_pattern(pattern):
                 continue
 
+            matches: list[str]
             try:
                 matches = glob.glob(pattern, recursive=True)
-                if len(matches) > cls._MAX_GLOB_RESULTS:
-                    matches = matches[: cls._MAX_GLOB_RESULTS]
-
-                for match in matches:
-                    path_obj = Path(match).resolve()
-                    if cls.is_safe_path(path_obj, allowed_dirs):
-                        paths.append(path_obj)
-
             except (OSError, ValueError):
                 continue
+
+            if len(matches) > cls._MAX_GLOB_RESULTS:
+                matches = matches[: cls._MAX_GLOB_RESULTS]
+
+            for match in matches:
+                path_obj = Path(match).resolve()
+                if cls.is_safe_path(path_obj, allowed_dirs):
+                    paths.append(path_obj)
 
         return cls._remove_duplicates(paths)
 
     @classmethod
     def is_safe_path(cls, path: object, allowed_dirs: list[Path] | None = None) -> bool:
         """Validate path is safe and within allowed directories."""
+        if path is None:
+            return False
+
         try:
-            if path is None:
-                return False
-
             path_obj = cls._convert_to_path(path)
-            if not path_obj:
-                return False
-
-            resolved_path = cls._resolve_path_safely(path_obj)
-            if not resolved_path:
-                return False
-
-            if cls._is_dangerous_path(path_obj, resolved_path):
-                return False
-
-            return cls._is_within_allowed_dirs(resolved_path, allowed_dirs)
-
         except Exception:
             return False
+        if not path_obj:
+            return False
+
+        resolved_path = cls._resolve_path_safely(path_obj)
+        if not resolved_path:
+            return False
+
+        if cls._is_dangerous_path(path_obj, resolved_path):
+            return False
+
+        return cls._is_within_allowed_dirs(resolved_path, allowed_dirs)
 
     @classmethod
     def ensure_parent_dir(cls, path: Path) -> None:
@@ -329,46 +329,66 @@ class MediaFileHandler:
         path_str = str(resolved_path)
         original_str = str(path_obj)
 
+        dangerous = False
+
         if not path_str.strip() or not original_str.strip():
-            return True
+            dangerous = True
 
-        if path_str in {"/", "\\", "C:\\", "C:/", "C:", "/root", "/home"}:
-            return True
+        # Root-like paths
+        if not dangerous and path_str in {
+            "/",
+            "\\",
+            "C:\\",
+            "C:/",
+            "C:",
+            "/root",
+            "/home",
+        }:
+            dangerous = True
 
-        if len(original_str.strip()) <= 3 and any(c in original_str for c in ["/", "\\"]):
-            return True
+        # Extremely short paths containing separators
+        if not dangerous and len(original_str.strip()) <= 3 and any(c in original_str for c in ["/", "\\"]):
+            dangerous = True
 
-        path_parts = path_obj.parts
-        if ".." in path_parts or any("." * 3 in part for part in path_parts):
-            return True
+        # Traversal attempts
+        if not dangerous:
+            path_parts = path_obj.parts
+            if ".." in path_parts or any("." * 3 in part for part in path_parts):
+                dangerous = True
 
-        path_lower = path_str.lower()
-        for pattern in cls._DANGEROUS_PATTERNS:
-            try:
-                if path_str.startswith(pattern) or Path(pattern).resolve() in resolved_path.parents:
-                    return True
-            except (OSError, ValueError):
-                if path_lower.startswith(pattern.lower()):
-                    return True
+        # Known dangerous directories
+        if not dangerous:
+            path_lower = path_str.lower()
+            if any(cls._pattern_matches_path(path_str, resolved_path, pat) for pat in cls._DANGEROUS_PATTERNS):
+                dangerous = True
 
         windows_indicators = ["windows", "system32", "program files"]
-        return any(indicator in path_lower for indicator in windows_indicators)
+        path_lower = path_str.lower()
+        return dangerous or any(indicator in path_lower for indicator in windows_indicators)
 
     @classmethod
     def _is_within_allowed_dirs(cls, resolved_path: Path, allowed_dirs: list[Path] | None) -> bool:
         """Check if path is within allowed directories."""
         if allowed_dirs is None:
             allowed_dirs = [Path.cwd()]
+        return any(cls._is_within_single_allowed(resolved_path, allowed_dir) for allowed_dir in allowed_dirs)
 
-        for allowed_dir in allowed_dirs:
-            try:
-                resolved_allowed = allowed_dir.resolve()
-                if resolved_path == resolved_allowed or resolved_path.is_relative_to(resolved_allowed):
-                    return True
-            except (ValueError, OSError):
-                continue
+    @staticmethod
+    def _pattern_matches_path(path_str: str, resolved_path: Path, pattern: str) -> bool:
+        """Safely check whether a pattern matches the path."""
+        try:
+            return path_str.startswith(pattern) or Path(pattern).resolve() in resolved_path.parents
+        except (OSError, ValueError):
+            return path_str.lower().startswith(pattern.lower())
 
-        return False
+    @staticmethod
+    def _is_within_single_allowed(resolved_path: Path, allowed_dir: Path) -> bool:
+        """Safely check containment within a single allowed directory."""
+        try:
+            resolved_allowed = allowed_dir.resolve()
+            return resolved_path == resolved_allowed or resolved_path.is_relative_to(resolved_allowed)
+        except (ValueError, OSError):
+            return False
 
     @classmethod
     def _handle_reserved_names(cls, sanitized: str) -> str:

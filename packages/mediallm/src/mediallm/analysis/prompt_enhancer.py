@@ -416,7 +416,6 @@ class PromptEnhancer:
         return suggestions
 
 
-# Module-level convenience functions for backward compatibility
 def refine_input(prompt: str, context: dict[str, Any]) -> str:
     """Convenience function to enhance a user prompt."""
     enhancer = PromptEnhancer()

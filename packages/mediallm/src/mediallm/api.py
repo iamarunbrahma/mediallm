@@ -33,7 +33,9 @@ class MediaLLM:
         self._working_dir = Path(working_dir) if working_dir else Path.cwd()
         self._timeout = timeout
         self._workspace: dict[str, Any] | None = None
-        self._llm = self._initialize_llm(ollama_host, model_name)
+        self._llm: LLM | None = None
+        self._ollama_host = ollama_host
+        self._model_name = model_name
 
         # Set up workspace (lazy initialization)
         if workspace is not None:
@@ -81,22 +83,33 @@ class MediaLLM:
         if len(request) > 10000:  # Reasonable limit
             raise ValueError("Request too long (max 10000 characters)")
 
+    def _get_llm(self) -> LLM:
+        """Get or create the LLM instance lazily."""
+        if self._llm is None:
+            self._llm = self._initialize_llm(self._ollama_host, self._model_name)
+        return self._llm
+
     def generate_command(
         self,
         request: str,
         return_raw: bool = False,
         assume_yes: bool = True,
+        output_dir: Path | str | None = None,
     ) -> list[list[str]] | CommandPlan:
         """Generate FFmpeg commands from natural language request."""
         self._validate_request(request)
 
         try:
             # Parse natural language to intent
-            intent = self._llm.parse_query(request, self.workspace, timeout=self._timeout)
+            intent = self._get_llm().parse_query(request, self.workspace, timeout=self._timeout)
 
             # Convert intent to command plan
             allowed_dirs = [self._working_dir]
-            plan = dispatch_task(intent, allowed_dirs=allowed_dirs)
+            plan = dispatch_task(
+                intent,
+                allowed_dirs=allowed_dirs,
+                output_dir=Path(output_dir) if output_dir else None,
+            )
 
             if return_raw:
                 return plan

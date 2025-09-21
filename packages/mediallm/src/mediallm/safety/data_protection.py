@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Final
 
+from pydantic_core import core_schema
+
 if TYPE_CHECKING:
     from pydantic_core.core_schema import AfterValidatorFunctionSchema
 
@@ -139,6 +141,11 @@ class SecretStr:
             return self._value == other._value
         return False
 
+    def __hash__(self) -> int:
+        """Provide a hash implementation based on the secret value."""
+        masked = self.mask()
+        return hash((bool(self._value), masked))
+
     def mask(self) -> str:
         """Get masked version of the secret."""
         return DataProtector.mask_api_key(self._value)
@@ -150,8 +157,6 @@ class SecretStr:
     @classmethod
     def __get_pydantic_core_schema__(cls, source_type: Any, handler: Any) -> AfterValidatorFunctionSchema:
         """Pydantic v2 compatibility for schema generation."""
-        from pydantic_core import core_schema
-
         return core_schema.no_info_after_validator_function(
             cls,
             core_schema.str_schema(),

@@ -4,6 +4,7 @@
 import argparse
 import asyncio
 import logging
+import os
 import sys
 from functools import partial
 from pathlib import Path
@@ -29,11 +30,20 @@ async def health_check(_request: Request) -> PlainTextResponse:
 
 def get_mediallm_instance(working_dir: Optional[str] = None) -> MediaLLM:
     """Get or create cached MediaLLM instance."""
-    work_dir = Path(working_dir) if working_dir else Path.cwd()
-    cache_key = str(work_dir)
+    working_dir = Path(working_dir) if working_dir else Path.cwd()
+    ollama_host = os.environ.get("MEDIALLM_OLLAMA_HOST", "http://localhost:11434")
+    model_name = os.environ.get("MEDIALLM_MODEL", "llama3.1:latest")
+    timeout = int(os.environ.get("MEDIALLM_TIMEOUT", "60"))
+
+    cache_key = f"{working_dir}::{ollama_host}::{model_name}::{timeout}"
 
     if cache_key not in _mediallm_instances:
-        _mediallm_instances[cache_key] = MediaLLM(working_dir=work_dir)
+        _mediallm_instances[cache_key] = MediaLLM(
+            working_dir=working_dir,
+            ollama_host=ollama_host,
+            model_name=model_name,
+            timeout=timeout,
+        )
 
     return _mediallm_instances[cache_key]
 
@@ -53,11 +63,21 @@ async def generate_command(
 ) -> Any:
     """Convert natural language to FFmpeg commands."""
     mediallm = get_mediallm_instance(workspace_dir)
+    output_path = os.environ.get("MEDIALLM_OUTPUT_PATH", "").strip()
+    if output_path:
+        try:
+            output_dir = Path(output_path).expanduser()
+        except Exception:
+            output_dir = None
+    else:
+        output_dir = None
+
     return await execute_sync(
         mediallm.generate_command,
         request=request,
         return_raw=return_raw,
         assume_yes=assume_yes,
+        output_dir=output_dir,
     )
 
 

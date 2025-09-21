@@ -86,14 +86,8 @@ def extract_potential_filenames(user_input: str) -> list[str]:
 
 def _filter_output_files(user_input: str, potential_files: list[str]) -> list[str]:
     """Filter out files that are likely outputs based on context."""
-    input_files = []
     input_lower = user_input.lower()
-
-    for filename in potential_files:
-        if not _is_likely_output_file(input_lower, filename):
-            input_files.append(filename)
-
-    return input_files
+    return [filename for filename in potential_files if not _is_likely_output_file(input_lower, filename)]
 
 
 def _is_likely_output_file(input_lower: str, filename: str) -> bool:
@@ -213,10 +207,12 @@ def validate_non_media_files_in_input(user_input: str) -> None:
     non_media_files = []
     for filename in potential_files:
         file_ext = Path(filename).suffix.lower()
-        if file_ext and file_ext not in all_media_exts:
-            # Check if file exists to avoid false positives
-            if Path(filename).exists() or Path.cwd() / filename:
-                non_media_files.append(filename)
+        if (
+            file_ext
+            and (file_ext not in all_media_exts)
+            and (Path(filename).exists() or (Path.cwd() / filename).exists())
+        ):
+            non_media_files.append(filename)
 
     if non_media_files:
         raise ValueError(

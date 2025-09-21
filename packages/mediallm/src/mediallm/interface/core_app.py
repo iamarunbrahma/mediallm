@@ -13,7 +13,10 @@ from .system_utils import reset_terminal_state
 # Initialize Typer app with completion disabled and support for invocation without subcommands
 app = typer.Typer(
     add_completion=False,
-    help="Convert media files using natural language commands - powered by local LLMs for complete privacy and zero cost",
+    help=(
+        "Convert media files using natural language commands - powered by local LLMs for "
+        "complete privacy and zero cost"
+    ),
     invoke_without_command=True,
 )
 
@@ -31,9 +34,9 @@ def nl() -> None:
     """Natural language media conversion interface."""
     try:
         nl_command()
-    except (KeyboardInterrupt, EOFError):
+    except (KeyboardInterrupt, EOFError) as e:
         reset_terminal_state()
-        raise typer.Exit(130)
+        raise typer.Exit(130) from e
     except Exception as e:
         reset_terminal_state()
         raise typer.Exit(1) from e
@@ -44,9 +47,9 @@ def explain() -> None:
     """Explain what a command would do without executing it."""
     try:
         explain_command()
-    except (KeyboardInterrupt, EOFError):
+    except (KeyboardInterrupt, EOFError) as e:
         reset_terminal_state()
-        raise typer.Exit(130)
+        raise typer.Exit(130) from e
     except Exception as e:
         reset_terminal_state()
         raise typer.Exit(1) from e
@@ -57,9 +60,9 @@ def enhance() -> None:
     """Enhance media processing capabilities."""
     try:
         enhance_command()
-    except (KeyboardInterrupt, EOFError):
+    except (KeyboardInterrupt, EOFError) as e:
         reset_terminal_state()
-        raise typer.Exit(130)
+        raise typer.Exit(130) from e
     except Exception as e:
         reset_terminal_state()
         raise typer.Exit(1) from e

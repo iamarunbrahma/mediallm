@@ -8,11 +8,14 @@ import logging
 import shutil
 import subprocess  # nosec B404: subprocess is used safely with explicit args and no shell
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Final
 
 from rich.console import Console
-from rich.table import Table
+
+if TYPE_CHECKING:
+    from rich.table import Table
 
 from ..constants.media_formats import MEDIA_EXTENSIONS
 from ..utils.format_utils import FormatUtils

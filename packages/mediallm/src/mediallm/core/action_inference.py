@@ -63,10 +63,10 @@ def infer_action_from_query(user_query: str) -> str:
         "dts",
     }
     for audio_fmt in audio_formats:
-        if any(pattern in query_lower for pattern in [f"to {audio_fmt}", f"into {audio_fmt}", f".{audio_fmt}"]):
-            # Check if we're likely converting from video (common video extensions mentioned)
-            if any(video_ext in query_lower for video_ext in ["mp4", "mov", "avi", "mkv", "webm", "flv"]):
-                return "extract_audio"
+        if any(pattern in query_lower for pattern in [f"to {audio_fmt}", f"into {audio_fmt}", f".{audio_fmt}"]) and any(
+            video_ext in query_lower for video_ext in ["mp4", "mov", "avi", "mkv", "webm", "flv"]
+        ):
+            return "extract_audio"
 
     if any(
         pattern in query_lower

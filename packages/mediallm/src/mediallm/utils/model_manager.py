@@ -76,10 +76,10 @@ class ModelManager:
             logger.debug(f"Found {len(models)} locally available models: {models}")
             return models
 
-        except subprocess.TimeoutExpired:
-            raise ConfigError("Timeout while listing models")
+        except subprocess.TimeoutExpired as e:
+            raise ConfigError("Timeout while listing models") from e
         except (subprocess.SubprocessError, OSError) as e:
-            raise ConfigError(f"Error listing models: {e}")
+            raise ConfigError(f"Error listing models: {e}") from e
 
     @staticmethod
     def _parse_model_list_output(stdout: str) -> list[str]:
@@ -120,7 +120,7 @@ class ModelManager:
             return cls._monitor_pull_progress(process, model_name, timeout)
 
         except subprocess.SubprocessError as e:
-            raise ConfigError(f"Error pulling model {model_name}: {e}")
+            raise ConfigError(f"Error pulling model {model_name}: {e}") from e
         except KeyboardInterrupt:
             logger.info("Model pull cancelled by user")
             if "process" in locals():
@@ -218,7 +218,7 @@ class ModelManager:
 
         except subprocess.SubprocessError as e:
             spinner.stop()
-            raise ConfigError(f"Error pulling model {model_name}: {e}")
+            raise ConfigError(f"Error pulling model {model_name}: {e}") from e
         except KeyboardInterrupt:
             logger.info("Model pull cancelled by user")
             spinner.stop()

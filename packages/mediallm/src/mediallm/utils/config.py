@@ -101,14 +101,16 @@ class AppConfig(BaseModel):
 
         validated_dirs = []
         for dir_path in v:
+            abs_path = None
             try:
                 abs_path = os.path.abspath(dir_path)
-                if os.path.exists(abs_path) and os.path.isdir(abs_path):
-                    validated_dirs.append(abs_path)
-                else:
-                    logger.warning(f"Directory does not exist or is not accessible: {dir_path}")
             except (OSError, ValueError) as e:
                 logger.warning(f"Invalid directory path {dir_path}: {e}")
+                continue
+            if os.path.exists(abs_path) and os.path.isdir(abs_path):
+                validated_dirs.append(abs_path)
+            else:
+                logger.warning(f"Directory does not exist or is not accessible: {dir_path}")
 
         if not validated_dirs:
             # Fallback to current directory if no valid directories
@@ -140,7 +142,8 @@ class AppConfig(BaseModel):
         """Validate that ffmpeg is available in PATH."""
         if shutil.which("ffmpeg") is None:
             raise ConfigError(
-                "ffmpeg not found in PATH. Please install it: macOS: brew install ffmpeg | Ubuntu/Debian: sudo apt install ffmpeg | Windows: choco install ffmpeg"
+                "ffmpeg not found in PATH. Please install it: macOS: brew install ffmpeg | "
+                "Ubuntu/Debian: sudo apt install ffmpeg | Windows: choco install ffmpeg"
             )
 
     def validate_ollama_connection(self) -> None:
@@ -152,19 +155,19 @@ class AppConfig(BaseModel):
             client = ollama.Client(host=self.ollama_host)
             models = client.list()
 
-            available_models = [m["name"] for m in models.get("models", [])]
+            available_models = [m.get("name") or m.get("model") for m in models.get("models", [])]
+            available_models = [m for m in available_models if m]
             logger.debug(f"Available Ollama models: {available_models}")
 
             # Don't fail if no models are available - we can download them
             if not available_models:
                 logger.debug(
-                    f"No models found on Ollama server at {self.ollama_host}. "
-                    f"Model {self.model_name} will be downloaded when needed."
+                    f"No models found on Ollama server at {self.ollama_host}. Model {self.model_name} "
+                    "will be downloaded when needed."
                 )
             elif self.model_name not in available_models:
                 logger.debug(
-                    f"Model '{self.model_name}' not found on server. "
-                    f"It will be downloaded automatically when needed."
+                    f"Model '{self.model_name}' not found on server. It will be downloaded automatically when needed."
                 )
 
         except ImportError as e:
@@ -173,12 +176,11 @@ class AppConfig(BaseModel):
             error_msg = str(e).lower()
             if "connection refused" in error_msg or "connection failed" in error_msg:
                 raise ConfigError(
-                    f"Cannot connect to Ollama server at {self.ollama_host}. "
-                    "Please ensure Ollama is running with: ollama serve"
+                    f"Cannot connect to Ollama server at {self.ollama_host}. Please ensure Ollama is running "
+                    "with: ollama serve"
                 ) from e
             raise ConfigError(
-                f"Failed to validate Ollama connection: {e}. "
-                "Try these troubleshooting steps:\n"
+                f"Failed to validate Ollama connection: {e}. Try these troubleshooting steps:\n"
                 "1. Start Ollama: ollama serve\n"
                 "2. Check installation: curl -fsSL https://ollama.com/install.sh | sh\n"
                 "3. Verify server status: curl http://localhost:11434/api/version"
@@ -204,35 +206,24 @@ class AppConfig(BaseModel):
             # User explicitly specified this model via CLI - try to ensure it's available
             logger.debug(f"Attempting to ensure CLI-specified model {self.model_name} is available...")
 
+            def _fallback() -> None:
+                best_model = get_best_available_model()
+                if best_model != self.model_name:
+                    logger.warning(
+                        f"CLI-specified model '{self.model_name}' could not be obtained. Using '{best_model}' instead."
+                    )
+                    self.model_name = best_model
+
             try:
                 # Try to download the exact model requested
                 if ensure_model_available(self.model_name, use_spinner=True):
                     logger.debug(f"Successfully ensured model {self.model_name} is available")
                 else:
-                    # Download failed or model doesn't exist
                     logger.error(f"Failed to download model {self.model_name}")
-                    logger.debug("Falling back to best available model...")
-
-                    # Fall back to best available model
-                    best_model = get_best_available_model()
-                    if best_model != self.model_name:
-                        logger.warning(
-                            f"CLI-specified model '{self.model_name}' could not be obtained. "
-                            f"Using '{best_model}' instead."
-                        )
-                        self.model_name = best_model
+                    _fallback()
             except Exception as e:
-                # Handle any errors during download attempt
                 logger.error(f"Error while trying to download CLI-specified model {self.model_name}: {e}")
-                logger.debug("Falling back to best available model...")
-
-                # Fall back to best available model
-                best_model = get_best_available_model()
-                if best_model != self.model_name:
-                    logger.warning(
-                        f"CLI-specified model '{self.model_name}' is not available. " f"Using '{best_model}' instead."
-                    )
-                    self.model_name = best_model
+                _fallback()
 
         except Exception as e:
             logger.warning(f"Could not ensure CLI-specified model availability: {e}")

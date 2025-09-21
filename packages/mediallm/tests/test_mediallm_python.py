@@ -39,6 +39,8 @@ class TestMediaLLMInitialization:
             assert mediallm.working_dir == Path.cwd()
             assert mediallm.timeout == 60
             assert mediallm._workspace is None  # Lazy initialization
+            # Trigger lazy provider initialization
+            mediallm._get_llm()
             mock_ollama.Client.assert_called_once_with(host="http://localhost:11434")
 
     def test_initialization_custom_params(self, sample_workspace):
@@ -69,6 +71,8 @@ class TestMediaLLMInitialization:
             assert mediallm.working_dir == Path(custom_working_dir)
             assert mediallm.timeout == custom_timeout
             assert mediallm._workspace == sample_workspace  # Pre-set workspace
+
+            mediallm._get_llm()
             mock_ollama.Client.assert_called_once_with(host=custom_host)
 
     def test_initialization_ollama_failure(self):
@@ -78,7 +82,7 @@ class TestMediaLLMInitialization:
 
         with patch.dict("sys.modules", {"ollama": mock_ollama}):
             with pytest.raises(RuntimeError) as exc_info:
-                MediaLLM()
+                MediaLLM()._get_llm()
 
             assert "Failed to initialize Ollama provider" in str(exc_info.value)
             assert "ollama serve" in str(exc_info.value)
@@ -260,8 +264,9 @@ class TestMediaLLMCommandGeneration:
             patch("mediallm.api.discover_media", return_value=sample_workspace),
             patch("mediallm.core.llm.OllamaAdapter", return_value=mock_ollama_adapter),
         ):
-            # Create MediaLLM instance first
+            # Create MediaLLM instance first and lazily initialize provider
             mediallm = MediaLLM()
+            mediallm._get_llm()
             # Then patch the _llm.parse_query method directly
             with (
                 patch.object(
@@ -438,6 +443,7 @@ class TestErrorHandling:
                 with patch("mediallm.core.llm.OllamaAdapter", return_value=mock_ollama_adapter):
                     # Create MediaLLM instance first
                     mediallm = MediaLLM()
+                    mediallm._get_llm()
                     # Then patch the _llm.parse_query method directly
                     with (
                         patch.object(
@@ -456,7 +462,7 @@ class TestErrorHandling:
 
         with patch.dict("sys.modules", {"ollama": mock_ollama}):
             with pytest.raises(RuntimeError, match="Failed to initialize Ollama provider"):
-                MediaLLM()
+                MediaLLM()._get_llm()
 
     def test_value_error_validation(self):
         """Test ValueError for invalid inputs."""

@@ -15,6 +15,7 @@ from prompt_toolkit.completion import Completion
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.filters import has_completions
 from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.shortcuts import CompleteStyle
@@ -48,7 +49,7 @@ class FilteredPathCompleter(Completer):
     def __init__(self) -> None:
         """Initialize the filtered path completer."""
 
-    def get_completions(self, document, complete_event):
+    def get_completions(self, document, _complete_event):
         """Get path completions excluding hidden files."""
         text = document.text_before_cursor
         path_info = self._parse_path_from_text(text)
@@ -243,8 +244,8 @@ class MediaCompleter(Completer):
                 current_dir = Path.cwd()
                 matching_files = []
 
-                # Maximum files to show for compact display (6 rows × 3 cols = 18)
-                MAX_COMPLETIONS = 18
+                # Maximum files to show for compact display (6 rows x 3 cols = 18)
+                max_completions = 18
 
                 for file_path in current_dir.rglob("*"):
                     if file_path.is_file():
@@ -269,7 +270,7 @@ class MediaCompleter(Completer):
 
                 # Limit to MAX_COMPLETIONS for compact display
                 total_matches = len(matching_files)
-                files_to_show = matching_files[:MAX_COMPLETIONS]
+                files_to_show = matching_files[:max_completions]
 
                 for filename, _ in files_to_show:
                     # Abbreviate very long paths for better display
@@ -278,8 +279,8 @@ class MediaCompleter(Completer):
                     yield Completion(filename, display=display_name, start_position=-len(file_prefix))
 
                 # Add indicator if more files are available
-                if total_matches > MAX_COMPLETIONS:
-                    remaining = total_matches - MAX_COMPLETIONS
+                if total_matches > max_completions:
+                    remaining = total_matches - max_completions
                     yield Completion(
                         "",  # Empty completion text
                         display=f"... and {remaining} more files (type more to filter)",
@@ -325,8 +326,6 @@ def create_input_box(
 
     # Create or reuse prompt session for persistent history
     if session is None:
-        from prompt_toolkit.history import InMemoryHistory
-
         history = InMemoryHistory()
         session = PromptSession(history=history)
 
@@ -343,7 +342,7 @@ def create_input_box(
         event.current_buffer.insert_text("\n")
 
     @kb.add("c-l", eager=True)  # Ctrl+L to clear screen
-    def _(event):
+    def _(_event):
         """Clear screen on Ctrl+L."""
         clear()
 
@@ -475,11 +474,11 @@ def create_input_box(
 
     except KeyboardInterrupt:
         # Handle Ctrl+C gracefully
-        raise KeyboardInterrupt()  # Re-raise to let caller handle
+        raise
 
     except EOFError:
         # Handle Ctrl+D gracefully
-        raise EOFError()  # Re-raise to let caller handle
+        raise
 
     except Exception as e:
         # Handle prompt-toolkit internal errors that cause session corruption
@@ -522,8 +521,6 @@ def get_multiline_prompt(
 
 def get_simple_prompt(prompt_text: str = "mediallm> ") -> str:
     """Get a simple single-line prompt with basic styling."""
-    from prompt_toolkit.formatted_text import HTML
-
     try:
         return prompt(
             HTML(f"<prompt>{prompt_text}</prompt>"),

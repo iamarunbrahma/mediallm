@@ -13,7 +13,13 @@ from typing import Final
 
 from rich.panel import Panel
 
+from ..core.llm import LLM
+from ..core.llm import OllamaAdapter
+from ..utils.model_manager import ensure_model_available
 from ..utils.table_factory import TableFactory
+
+if TYPE_CHECKING:
+    from rich.table import Table
 
 if TYPE_CHECKING:
     from rich.console import Console
@@ -99,7 +105,7 @@ class CommandHandler:
         # Execute command
         if command in self.commands:
             return self.commands[command](args, context)
-        self.console.print(f"[red]× Unknown command: /{command}[/red]")
+        self.console.print(f"[red]x Unknown command: /{command}[/red]")
         self.console.print("Type [bold cyan]/help[/bold cyan] to see available commands.")
         return ""
 
@@ -140,7 +146,7 @@ class CommandHandler:
             border_style="blue",
         )
 
-    def _show_help(self, args: str, context: dict[str, Any] | None = None) -> str:
+    def _show_help(self, _args: str, _context: dict[str, Any] | None = None) -> str:
         """Show help information."""
         self.console.print()
 
@@ -152,15 +158,15 @@ class CommandHandler:
         self.console.print()
         return ""
 
-    def _generate_command(self, args: str, context: dict[str, Any] | None = None) -> str:
+    def _generate_command(self, args: str, _context: dict[str, Any] | None = None) -> str:
         """Handle generate command - return the prompt for normal processing."""
         if not args.strip():
-            self.console.print("[red]× Error:[/red] Please provide a prompt after /generate")
+            self.console.print("[red]x Error:[/red] Please provide a prompt after /generate")
             self.console.print("[dim]Example: /generate convert video.mp4 to audio.mp3[/dim]")
             return ""
         return args.strip()
 
-    def _clear_screen(self, args: str, context: dict[str, Any] | None = None) -> str:
+    def _clear_screen(self, _args: str, _context: dict[str, Any] | None = None) -> str:
         """Clear the terminal screen completely."""
         try:
             sys.stdout.write(self._CLEAR_SEQUENCE)
@@ -181,7 +187,7 @@ class CommandHandler:
             sys.stdout.write("\n" * 50)
             sys.stdout.flush()
 
-    def _show_history(self, args: str, context: dict[str, Any] | None = None) -> str:
+    def _show_history(self, _args: str, _context: dict[str, Any] | None = None) -> str:
         """Show command history."""
         if not self.command_history:
             self.console.print("[bold green]No command history available.[/bold green]")
@@ -199,11 +205,11 @@ class CommandHandler:
         self.console.print(history_table)
         return ""
 
-    def _exit_app(self, args: str, context: dict[str, Any] | None = None) -> None:
+    def _exit_app(self, _args: str, _context: dict[str, Any] | None = None) -> None:
         """Exit the application."""
         self.console.print("[bold green]Goodbye![/bold green]")
 
-    def _show_examples(self, args: str, context: dict[str, Any] | None = None) -> str:
+    def _show_examples(self, _args: str, _context: dict[str, Any] | None = None) -> str:
         """Show example commands."""
         examples_table = TableFactory.create_command_table("Example Commands")
         examples_table.add_column("Task", style="bold green", min_width=20)
@@ -215,7 +221,7 @@ class CommandHandler:
         self.console.print(examples_table)
         return ""
 
-    def _show_config(self, args: str, context: dict[str, Any] | None = None) -> str:
+    def _show_config(self, _args: str, context: dict[str, Any] | None = None) -> str:
         """Show current configuration."""
         if not context or "config" not in context:
             self.console.print("[bold green]Configuration not available[/bold green]")
@@ -239,7 +245,7 @@ class CommandHandler:
         self.console.print(config_table)
         return ""
 
-    def _list_files(self, args: str, context: dict[str, Any] | None = None) -> str:
+    def _list_files(self, _args: str, context: dict[str, Any] | None = None) -> str:
         """List available media files."""
         if not context or "media_context" not in context:
             self.console.print("[bold green]No media context available[/bold green]")
@@ -285,7 +291,7 @@ class CommandHandler:
     def _switch_model(self, args: str, context: dict[str, Any] | None = None) -> str:
         """Show current model or switch to a new one."""
         if not context or "config" not in context:
-            self.console.print("[red]× Error:[/red] Configuration not available")
+            self.console.print("[red]x Error:[/red] Configuration not available")
             return ""
 
         config = context["config"]
@@ -306,13 +312,9 @@ class CommandHandler:
         self.console.print(f"[cyan]Switching to model:[/cyan] [white]{new_model}[/white]")
 
         try:
-            from ..core.llm import LLM
-            from ..core.llm import OllamaAdapter
-            from ..utils.model_manager import ensure_model_available
-
             # Try to ensure the model is available (will download if needed)
             if not ensure_model_available(new_model, use_spinner=True):
-                self.console.print(f"[red]× Failed to obtain model:[/red] [white]{new_model}[/white]")
+                self.console.print(f"[red]x Failed to obtain model:[/red] [white]{new_model}[/white]")
                 return ""
 
             # Create new LLM instance with the new model
@@ -332,7 +334,7 @@ class CommandHandler:
         except Exception as e:
             # Restore original model on failure
             config.model_name = old_model if "old_model" in locals() else config.model_name
-            self.console.print(f"[red]× Error switching model:[/red] {e!s}")
+            self.console.print(f"[red]x Error switching model:[/red] {e!s}")
             self.console.print("[dim]The original model is still active[/dim]")
 
         # Allow terminal to clean up before returning to prompt

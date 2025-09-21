@@ -172,7 +172,41 @@ force-single-line = true
 known-first-party = ["mediallm"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "PLR2004", "ARG"]
+"tests/*" = [
+    "S101",
+    "PLR2004",
+    "ARG",
+    "PLC0415",  # allow local imports in tests
+    "SIM117",   # nested with statements in tests
+    "PT011",    # pytest.raises(Exception) too broad
+    "PT017",    # assertions on exception in except blocks
+    "B017"      # blind except assertions in tests
+]
+"src/mediallm/constants/prompts.py" = [
+    "E501"  # allow long lines for documentation-like content
+]
+"src/mediallm/utils/config.py" = [
+    "PLC0415"  # allow local imports for optional dependencies
+]
+"src/mediallm/utils/model_manager.py" = [
+    "PLC0415"  # allow local imports in spinner-integrated path
+]
+"src/mediallm/core/action_inference.py" = [
+    "PLR0911",  # too many return statements (pattern matching function)
+    "PLR0915",  # too many statements
+]
+"src/mediallm/analysis/prompt_enhancer.py" = [
+    "PLR0911",  # too many return statements
+]
+"src/mediallm/core/output_generator.py" = [
+    "PLR0911"  # multiple return branches by design
+]
+"src/mediallm/interface/interactive_prompt.py" = [
+    "PLR0915"  # too many statements (UI glue code)
+]
+"src/mediallm/core/task_router.py" = [
+    "PLR0911"  # multiple return statements by design for summary builders
+]
 
 # Pytest configuration (2025 modern best practices)
 [tool.pytest.ini_options]

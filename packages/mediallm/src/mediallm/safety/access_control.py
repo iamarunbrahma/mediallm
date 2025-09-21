@@ -316,12 +316,8 @@ class AccessController:
 
         # Check for dangerous path patterns
         for pattern in cls._DANGEROUS_PATTERNS:
-            try:
-                if path_str.startswith(pattern) or Path(pattern).resolve() in resolved_path.parents:
-                    return False
-            except (OSError, ValueError):
-                if path_lower.startswith(pattern.lower()):
-                    return False
+            if cls._pattern_matches_path(path_str, resolved_path, pattern):
+                return False
 
         # Additional checks for Windows patterns on any system
         return all(indicator not in path_lower for indicator in cls._WINDOWS_INDICATORS)
@@ -332,15 +328,24 @@ class AccessController:
         if allowed_dirs is None:
             allowed_dirs = [Path.cwd()]
 
-        for allowed_dir in allowed_dirs:
-            try:
-                resolved_allowed = allowed_dir.resolve()
-                if resolved_path == resolved_allowed or resolved_path.is_relative_to(resolved_allowed):
-                    return True
-            except (ValueError, OSError):
-                continue
+        return any(cls._is_within_single_allowed(resolved_path, allowed_dir) for allowed_dir in allowed_dirs)
 
-        return False
+    @staticmethod
+    def _pattern_matches_path(path_str: str, resolved_path: Path, pattern: str) -> bool:
+        """Safely check whether a pattern matches the path without try/except in the loop."""
+        try:
+            return path_str.startswith(pattern) or Path(pattern).resolve() in resolved_path.parents
+        except (OSError, ValueError):
+            return path_str.lower().startswith(pattern.lower())
+
+    @staticmethod
+    def _is_within_single_allowed(resolved_path: Path, allowed_dir: Path) -> bool:
+        """Safely check containment within a single allowed directory."""
+        try:
+            resolved_allowed = allowed_dir.resolve()
+            return resolved_path == resolved_allowed or resolved_path.is_relative_to(resolved_allowed)
+        except (ValueError, OSError):
+            return False
 
     @staticmethod
     def ensure_parent_dir(path: Path) -> None:

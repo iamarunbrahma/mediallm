@@ -7,6 +7,17 @@ import logging
 
 import typer
 
+from ..analysis.workspace_scanner import discover_media
+from ..core.command_builder import construct_operations
+from ..core.llm import LLM
+from ..core.llm import OllamaAdapter
+from ..core.task_router import dispatch_task
+from ..interface.confirm_dialog import confirm_prompt
+from ..interface.spinner import show_llm_spinner
+from ..processing.command_executor import detect_overwrites
+from ..processing.command_executor import preview
+from ..processing.command_executor import preview_modified_commands
+from ..processing.command_executor import run
 from ..utils.config import AppConfig
 from ..utils.config import load_config
 from ..utils.exceptions import ConfigError
@@ -14,6 +25,9 @@ from .command_handlers import enhance_command
 from .command_handlers import explain_command
 from .command_handlers import nl_command
 from .display_utils import console
+from .file_utils import filter_context_for_referenced_files
+from .file_utils import parse_file_references
+from .file_utils import validate_non_media_files_in_input
 from .system_utils import get_clean_error_message
 from .system_utils import reset_terminal_state
 from .system_utils import setup_logging
@@ -23,7 +37,10 @@ logger = logging.getLogger(__name__)
 # Initialize Typer app with completion disabled and support for invocation without subcommands
 app = typer.Typer(
     add_completion=False,
-    help="Convert media files using natural language commands - powered by local LLMs for complete privacy and zero cost",
+    help=(
+        "Convert media files using natural language commands - "
+        "powered by local LLMs for complete privacy and zero cost"
+    ),
     invoke_without_command=True,
 )
 
@@ -83,7 +100,7 @@ def _main_impl(
 
     except ConfigError as e:
         clean_msg = get_clean_error_message(e)
-        console.print(f"[red]× Configuration Error:[/red] {clean_msg}")
+        console.print(f"[red]x Configuration Error:[/red] {clean_msg}")
         raise typer.Exit(1) from e
 
 
@@ -133,17 +150,6 @@ def _handle_command_execution(
 def _execute_one_shot_command(prompt: str, cfg: AppConfig, yes: bool) -> None:
     """Execute a single one-shot command."""
     try:
-        from ..analysis.workspace_scanner import discover_media
-        from ..core.command_builder import construct_operations
-        from ..core.llm import LLM
-        from ..core.llm import OllamaAdapter
-        from ..core.task_router import dispatch_task
-        from ..interface.confirm_dialog import confirm_prompt
-        from ..interface.spinner import show_llm_spinner
-        from .file_utils import filter_context_for_referenced_files
-        from .file_utils import parse_file_references
-        from .file_utils import validate_non_media_files_in_input
-
         # Validate for non-media files before processing
         validate_non_media_files_in_input(prompt)
 
@@ -171,10 +177,7 @@ def _execute_one_shot_command(prompt: str, cfg: AppConfig, yes: bool) -> None:
             reset_terminal_state()
             raise
 
-        from ..processing.command_executor import detect_overwrites
-        from ..processing.command_executor import preview
-        from ..processing.command_executor import preview_modified_commands
-        from ..processing.command_executor import run
+        # command executor helpers are imported at module level
 
         # Always show preview before asking for confirmation
         preview(commands)
@@ -210,12 +213,12 @@ def _execute_one_shot_command(prompt: str, cfg: AppConfig, yes: bool) -> None:
 
     except ValueError as e:
         clean_msg = get_clean_error_message(e)
-        console.print(f"[red]× Error:[/red] {clean_msg}")
-        raise typer.Exit(1)
+        console.print(f"[red]x Error:[/red] {clean_msg}")
+        raise typer.Exit(1) from e
     except Exception as e:
         clean_msg = get_clean_error_message(e)
-        console.print(f"[red]× Error:[/red] {clean_msg}")
-        raise typer.Exit(1)
+        console.print(f"[red]x Error:[/red] {clean_msg}")
+        raise typer.Exit(1) from e
     except KeyboardInterrupt as e:
         interrupt_msg = str(e) if str(e) else "Operation interrupted"
         console.print(f"\n[bold green]⏹ {interrupt_msg}[/bold green]")
@@ -230,9 +233,9 @@ def nl(
     """Translate NL to ffmpeg, preview, confirm, and execute."""
     try:
         nl_command(ctx=ctx, prompt=prompt)
-    except (KeyboardInterrupt, EOFError):
+    except (KeyboardInterrupt, EOFError) as e:
         reset_terminal_state()
-        raise typer.Exit(130)
+        raise typer.Exit(130) from e
     except Exception as e:
         reset_terminal_state()
         raise typer.Exit(1) from e
@@ -245,9 +248,9 @@ def explain(
     """Explain an existing ffmpeg command in natural language."""
     try:
         explain_command(ffmpeg_command)
-    except (KeyboardInterrupt, EOFError):
+    except (KeyboardInterrupt, EOFError) as e:
         reset_terminal_state()
-        raise typer.Exit(130)
+        raise typer.Exit(130) from e
     except Exception as e:
         reset_terminal_state()
         raise typer.Exit(1) from e
@@ -261,9 +264,9 @@ def enhance(
     """Enhance and analyze a user prompt for better LLM understanding."""
     try:
         enhance_command(prompt, show_suggestions)
-    except (KeyboardInterrupt, EOFError):
+    except (KeyboardInterrupt, EOFError) as e:
         reset_terminal_state()
-        raise typer.Exit(130)
+        raise typer.Exit(130) from e
     except Exception as e:
         reset_terminal_state()
         raise typer.Exit(1) from e

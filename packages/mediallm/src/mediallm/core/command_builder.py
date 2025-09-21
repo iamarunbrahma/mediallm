@@ -6,7 +6,9 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
+from typing import ClassVar
 
+from ..processing.media_file_handler import validate_ffmpeg_command
 from .file_type_detector import FileTypeDetector
 
 if TYPE_CHECKING:
@@ -19,7 +21,7 @@ class CommandBuilder:
     """Builds executable FFmpeg commands from command plans."""
 
     # Pre-input flags that should come before -i
-    _PRE_INPUT_FLAGS = {"-ss", "-t", "-to"}
+    _PRE_INPUT_FLAGS: ClassVar[set[str]] = {"-ss", "-t", "-to"}
 
     def __init__(self) -> None:
         """Initialize the command builder."""
@@ -190,8 +192,6 @@ class CommandBuilder:
 
     def _validate_command(self, cmd: list[str]) -> bool:
         """Validate the generated command for security."""
-        from ..processing.media_file_handler import validate_ffmpeg_command
-
         result = validate_ffmpeg_command(cmd)
         logger.debug(f"Command validation result: {result}")
         return result

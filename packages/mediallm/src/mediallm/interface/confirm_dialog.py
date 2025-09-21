@@ -22,7 +22,7 @@ class ConfirmDialog:
 
     def confirm_prompt(
         self,
-        question: str,
+        _question: str,
         default_yes: bool = True,
         assume_yes: bool = False,
         console_instance: Console | None = None,

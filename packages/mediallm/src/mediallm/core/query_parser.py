@@ -80,7 +80,7 @@ class QueryParser:
             return self._handle_json_error(json_err, user_payload, optimized_request, workspace, timeout)
 
     def _process_response_data(
-        self, data: dict[str, Any], optimized_request: str, workspace: dict[str, Any]
+        self, data: dict[str, Any], _optimized_request: str, _workspace: dict[str, Any]
     ) -> MediaIntent:
         """Process response data and handle error responses."""
         # Check if the response is an error JSON from the model
@@ -90,14 +90,17 @@ class QueryParser:
 
             if error_type == "missing_input":
                 raise TranslationError(
-                    f"Input file not found: {error_message}. Please ensure the file exists in the current directory and try again."
+                    f"Input file not found: {error_message}. Please ensure the file exists in the current "
+                    "directory and try again."
                 )
             if error_type == "unsupported_action":
                 raise TranslationError(
-                    f"Unsupported operation: {error_message}. Please check the supported actions and try a different approach."
+                    f"Unsupported operation: {error_message}. Please check the supported actions and try a "
+                    "different approach."
                 )
             raise TranslationError(
-                f"Model error: {error_message}. Please try rephrasing your request or check if the operation is supported."
+                f"Model error: {error_message}. Please try rephrasing your request or check if the operation is "
+                "supported."
             )
 
         intent = MediaIntent.model_validate(data)
@@ -121,12 +124,18 @@ class QueryParser:
         except ValidationError as repair_err:
             logger.error(f"Failed to repair JSON: {repair_err}")
             raise TranslationError(
-                f"Failed to validate parsed task: {repair_err}. The local model returned JSON that doesn't match expected format. This could be due to: (1) unsupported operation - check supported actions, (2) ambiguous query - be more specific about what you want to do, (3) model issues - try a more capable model like llama3 or mistral."
+                f"Failed to validate parsed task: {repair_err}. The local model returned JSON that "
+                "doesn't match expected format. This could be due to: (1) unsupported operation - check "
+                "supported actions, (2) ambiguous query - be more specific about what you want to do, (3) "
+                "model issues - try a more capable model like llama3 or mistral."
             ) from repair_err
         except Exception as repair_exc:
             logger.error(f"Unexpected error during JSON repair: {repair_exc}")
             raise TranslationError(
-                f"Failed to validate parsed task: {validation_err}. The local model returned JSON that doesn't match expected format. This could be due to: (1) unsupported operation - check supported actions, (2) ambiguous query - be more specific about what you want to do, (3) model issues - try a more capable model like llama3 or mistral."
+                f"Failed to validate parsed task: {validation_err}. The local model returned JSON that "
+                "doesn't match expected format. This could be due to: (1) unsupported operation - check "
+                "supported actions, (2) ambiguous query - be more specific about what you want to do, (3) "
+                "model issues - try a more capable model like llama3 or mistral."
             ) from validation_err
 
     def _handle_json_error(
@@ -162,7 +171,9 @@ class QueryParser:
         except json.JSONDecodeError as json_err:
             logger.error(f"JSON parsing failed on retry: {json_err}")
             raise TranslationError(
-                f"Failed to parse model response as JSON: {json_err}. The local model returned invalid JSON format. This could be due to: (1) model issues - try a different model like llama3, (2) timeout - try increasing --timeout, (3) complex query - try simplifying your request."
+                f"Failed to parse model response as JSON: {json_err}. The local model returned invalid JSON "
+                "format. This could be due to: (1) model issues - try a different model like llama3, (2) "
+                "timeout - try increasing --timeout, (3) complex query - try simplifying your request."
             ) from json_err
         except ParseError:
             # Re-raise ParseError from provider (already has good error message)
@@ -191,5 +202,8 @@ class QueryParser:
         except ValidationError as final_err:
             logger.error(f"Final repair attempt failed: {final_err}")
             raise TranslationError(
-                f"Failed to validate parsed task: {final_err}. The local model returned JSON that doesn't match expected format. This could be due to: (1) unsupported operation - check supported actions, (2) ambiguous query - be more specific about what you want to do, (3) model issues - try a more capable model like llama3 or mistral."
+                f"Failed to validate parsed task: {final_err}. The local model returned JSON that doesn't "
+                "match expected format. This could be due to: (1) unsupported operation - check supported "
+                "actions, (2) ambiguous query - be more specific about what you want to do, (3) model issues - "
+                "try a more capable model like llama3 or mistral."
             ) from final_err
