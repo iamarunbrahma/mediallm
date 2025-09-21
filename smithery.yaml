@@ -2,32 +2,6 @@ runtime: "container"
 
 startCommand:
   type: "http"
-  configSchema:
-    type: "object"
-    properties:
-      workspace:
-        type: "string"
-        title: "Workspace Directory"
-        description: "Directory inside the container to scan for media files"
-        default: "/workspace"
-      model:
-        type: "string"
-        title: "LLM Model"
-        default: "llama3.1:latest"
-      ollamaHost:
-        type: "string"
-        title: "Ollama Host"
-        default: "http://localhost:11434"
-      dryRun:
-        type: "boolean"
-        title: "Dry Run"
-        default: false
-    required: []
-  exampleConfig:
-    workspace: "/workspace"
-    model: "llama3.1:latest"
-    ollamaHost: "http://localhost:11434"
-    dryRun: true
 
 build:
   dockerfile: "packages/mediallm-mcp/Dockerfile"
@@ -35,7 +9,6 @@ build:
 
 env:
   PYTHONUNBUFFERED: "1"
-  MCP_PATH: "/mcp"
   FFMPEG_PATH: "/usr/bin/ffmpeg"
   MEDIALLM_WORKSPACE: "/workspace"
   MEDIALLM_MODEL: "llama3.1:latest"
