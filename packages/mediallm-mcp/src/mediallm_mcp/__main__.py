@@ -27,6 +27,11 @@ async def health_check(_request: Request) -> PlainTextResponse:
     return PlainTextResponse("OK")
 
 
+@mcp.custom_route("/", methods=["GET"])
+async def root(_request: Request) -> PlainTextResponse:
+    return PlainTextResponse("OK")
+
+
 def get_mediallm_instance(working_dir: Optional[str] = None) -> MediaLLM:
     """Get or create cached MediaLLM instance."""
     work_dir = Path(working_dir) if working_dir else Path.cwd()
