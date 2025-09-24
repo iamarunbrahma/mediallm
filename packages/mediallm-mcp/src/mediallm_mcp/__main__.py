@@ -11,17 +11,18 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from fastmcp import FastMCP
+from mediallm import MediaLLM
 
 logger = logging.getLogger(__name__)
 
 mcp = FastMCP("mediallm-mcp")
 
-_mediallm_instances: Dict[str, "MediaLLM"] = {}
+_mediallm_instances: Dict[str, MediaLLM] = {}
 
 
 
 
-def get_mediallm_instance(working_dir: Optional[str] = None) -> "MediaLLM":
+def get_mediallm_instance(working_dir: Optional[str] = None) -> MediaLLM:
     """Get or create cached MediaLLM instance."""
     working_dir = Path(working_dir) if working_dir else Path.cwd()
     ollama_host = os.environ.get("MEDIALLM_OLLAMA_HOST", "http://localhost:11434")
@@ -31,8 +32,6 @@ def get_mediallm_instance(working_dir: Optional[str] = None) -> "MediaLLM":
     cache_key = f"{working_dir}::{ollama_host}::{model_name}::{timeout}"
 
     if cache_key not in _mediallm_instances:
-        from mediallm import MediaLLM  # type: ignore
-
         _mediallm_instances[cache_key] = MediaLLM(
             working_dir=working_dir,
             ollama_host=ollama_host,
@@ -79,6 +78,9 @@ async def scan_workspace(directory: Optional[str] = None) -> Dict[str, Any]:
     return await execute_sync(mediallm.scan_workspace, directory=directory)
 
 
+# Removed legacy Starlette app builder; FastMCP manages HTTP/SSE.
+
+
 def run_stdio():
     """Run server with STDIO transport."""
     mcp.run()
@@ -88,7 +90,6 @@ async def run_sse(host: str, port: int):
     """Run server with SSE transport."""
     print("Starting SSE transport...")
     print(f"Connect to: http://{host}:{port}/sse")
-
     # FastMCP manages the SSE server lifecycle
     mcp.run(transport="sse", host=host, port=port)
 
@@ -97,7 +98,6 @@ async def run_http(host: str, port: int, path: str):
     """Run server with Streamable HTTP transport."""
     print("Starting Streamable HTTP transport...")
     print(f"MCP endpoint: http://{host}:{port}{path}")
-    
     # FastMCP manages the HTTP server lifecycle; expose MCP at /mcp
     mcp.run(transport="http", host=host, port=port, path=path)
 
