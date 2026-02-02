@@ -190,7 +190,7 @@ class TaskDispatcher:
         builder = action_builders.get(task.action)
         if builder is None:
             raise ConstructionError(
-                "Unsupported action: {action}. Supported: convert, extract_audio, remove_audio, trim, segment, "
+                f"Unsupported action: {task.action}. Supported: convert, extract_audio, remove_audio, trim, segment, "
                 "thumbnail, frames, compress, overlay, format_convert, extract_frames, burn_subtitles, "
                 "extract_subtitles, slideshow. Please rephrase your request using supported operations."
             )

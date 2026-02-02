@@ -57,6 +57,10 @@ AUDIO_EXTENSIONS: Final[set[str]] = {
 # Image file extensions
 IMAGE_EXTENSIONS: Final[set[str]] = {"png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp"}
 
+# Image format set (for format detection in queries)
+# Note: Images don't need codecs - FFmpeg handles them directly based on extension
+IMAGE_FORMATS: Final[set[str]] = {"png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp"}
+
 # Subtitle file extensions
 SUBTITLE_EXTENSIONS: Final[set[str]] = {"srt", "vtt", "ass", "ssa", "sub", "idx"}
 

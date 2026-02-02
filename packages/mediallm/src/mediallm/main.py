@@ -6,6 +6,13 @@ import traceback
 
 try:
     from mediallm.interface.terminal_interface import app as terminal_app
+    from mediallm.utils.exceptions import ConfigError
+    from mediallm.utils.exceptions import ConstructionError
+    from mediallm.utils.exceptions import ExecError
+    from mediallm.utils.exceptions import MediaLLMError
+    from mediallm.utils.exceptions import SecurityError
+    from mediallm.utils.exceptions import TranslationError
+    from mediallm.utils.exceptions import ValidationError
 except ImportError as e:
     print(f"Error: Failed to import MediaLLM components: {e}", file=sys.stderr)
     print("Please ensure MediaLLM is properly installed.", file=sys.stderr)
@@ -24,6 +31,42 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nOperation cancelled by user.", file=sys.stderr)
         sys.exit(130)  # Standard exit code for Ctrl+C
+
+    except SecurityError as e:
+        print(f"Security error: {e.message}", file=sys.stderr)
+        sys.exit(2)
+
+    except ValidationError as e:
+        print(f"Validation error: {e.message}", file=sys.stderr)
+        sys.exit(3)
+
+    except ConfigError as e:
+        print(f"Configuration error: {e.message}", file=sys.stderr)
+        print("Please check your Ollama installation and configuration.", file=sys.stderr)
+        sys.exit(4)
+
+    except TranslationError as e:
+        print(f"Translation error: {e.message}", file=sys.stderr)
+        print("Try rephrasing your request or using a different model.", file=sys.stderr)
+        sys.exit(5)
+
+    except ConstructionError as e:
+        print(f"Command construction error: {e.message}", file=sys.stderr)
+        sys.exit(6)
+
+    except ExecError as e:
+        print(f"Execution error: {e.message}", file=sys.stderr)
+        sys.exit(7)
+
+    except MediaLLMError as e:
+        # Catch-all for any other MediaLLM-specific errors
+        print(f"Error: {e.message}", file=sys.stderr)
+        sys.exit(1)
+
+    except OSError as e:
+        print(f"System error: {e}", file=sys.stderr)
+        sys.exit(1)
+
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
         if __debug__:  # Show traceback in debug mode
@@ -33,9 +76,6 @@ def main() -> None:
 
 def _validate_environment() -> None:
     """Validate basic environment requirements."""
-    # Check Python version
-
-    # Check for required modules
     _check_required_modules()
 
 

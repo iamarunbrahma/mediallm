@@ -35,7 +35,7 @@
 
 MediaLLM transforms media processing by bridging the gap between human language and FFmpeg complexity. This Python package enables you to manipulate videos, audio files, images, and subtitles using simple, conversational commands powered by local AI models.
 
-Instead of memorizing complex FFmpeg syntax, simply describe what you want: "make this video square for Instagram," "extract the audio as high-quality MP3," or "create a 10-second GIF from the middle of this video." MediaLLM understands your intent and generates the precise commands needed, all while keeping your data completely private through local processing.
+Instead of memorizing complex FFmpeg syntax, simply describe what you want: "convert this video to MP4," "extract the audio as high-quality MP3," or "compress this video to a smaller size." MediaLLM understands your intent and generates the precise commands needed, all while keeping your data completely private through local processing.
 
 ## Why MediaLLM?
 
@@ -92,8 +92,8 @@ ollama pull llama3.1:latest
 
 # 2. Convert media with natural language
 mediallm "convert video.mp4 to MP3 audio"
-mediallm "resize video.mov to 720p with high quality"
-mediallm "create 10-second GIF from video.mp4 starting at 1 minute"
+mediallm "convert video.mov to MP4 format"
+mediallm "extract audio from movie.mp4 as high quality MP3"
 
 # 3. Preview commands before execution
 mediallm --dry-run "compress large-video.mkv to smaller size"
@@ -104,25 +104,22 @@ mediallm --dry-run "compress large-video.mkv to smaller size"
 ### CLI Commands
 
 ```bash
-# Video Operations
+# Video Conversions
 mediallm "convert video.mov to MP4 format"
-mediallm "compress large-video.mp4 to 50% size"
-mediallm "extract thumbnail at 30 seconds from video.mp4"
-mediallm "make video.mp4 square format for Instagram"
+mediallm "convert video.avi to MP4"
+mediallm "convert video.flv to MP4 format"
+mediallm "compress large-video.mp4 to smaller size"
 
 # Audio Operations
 mediallm "extract audio from movie.mp4 as high quality MP3"
-mediallm "convert song.wav to AAC format"
-mediallm "reduce audio volume by 50% in video.mp4"
+mediallm "convert video.mp4 to MP3 audio"
 
-# Creative Operations
-mediallm "create animated GIF from first 5 seconds of video.mp4"
-mediallm "extract frame at 2:15 from video.mp4"
-mediallm "add fade in/out effects to video.mp4"
+# Image Operations
+mediallm "extract thumbnail from video.mp4"
+mediallm "convert image.jpg to PNG format"
 
-# Batch Operations
-mediallm "convert all MKV files to MP4 format"
-mediallm "extract audio from all videos in folder"
+# Trimming
+mediallm "trim video.mp4 from start to 30 seconds"
 ```
 
 ### Python API

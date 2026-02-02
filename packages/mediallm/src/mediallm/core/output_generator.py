@@ -169,13 +169,13 @@ class OutputGenerator:
         """Generate convert action output name."""
         # First check if target format is specified in task
         target_extension = self._detect_target_format_from_task(task)
-
-        if target_extension:
-            # Use the detected target format
-            return target_dir / f"{stem}_converted{target_extension}"
-        # Fall back to input-type-based naming
         file_type = self._file_type_detector.get_file_type(input_path)
 
+        # If target format is explicitly specified, always use it
+        if target_extension:
+            return target_dir / f"{stem}_converted{target_extension}"
+
+        # Fall back to input-type-based naming
         if file_type == "video":
             return target_dir / f"{stem}_converted.mp4"
         if file_type == "audio":
@@ -187,11 +187,10 @@ class OutputGenerator:
             # For image files, maintain image format unless converting to video
             if task.video_codec or "video" in str(task.filters or "").lower():
                 return target_dir / f"{stem}_converted.mp4"
+            # Keep original image format if no explicit target specified
             return target_dir / f"{stem}_converted{suffix}"
         if file_type == "subtitle":
-            # For subtitle files, use the target format if specified, otherwise default to SRT
-            if target_extension:
-                return target_dir / f"{stem}_converted{target_extension}"
+            # For subtitle files, default to SRT
             return target_dir / f"{stem}_converted.srt"
         # For non-media files, keep original extension to indicate unsupported conversion
         return target_dir / f"{stem}_converted{suffix}"

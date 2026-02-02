@@ -8,7 +8,10 @@ import os
 import sys
 from functools import partial
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 from fastmcp import FastMCP
 from mediallm import MediaLLM
@@ -20,20 +23,18 @@ mcp = FastMCP("mediallm-mcp")
 _mediallm_instances: Dict[str, MediaLLM] = {}
 
 
-
-
 def get_mediallm_instance(working_dir: Optional[str] = None) -> MediaLLM:
     """Get or create cached MediaLLM instance."""
-    working_dir = Path(working_dir) if working_dir else Path.cwd()
+    working_dir_path = Path(working_dir) if working_dir else Path.cwd()
     ollama_host = os.environ.get("MEDIALLM_OLLAMA_HOST", "http://localhost:11434")
     model_name = os.environ.get("MEDIALLM_MODEL", "llama3.1:latest")
     timeout = int(os.environ.get("MEDIALLM_TIMEOUT", "60"))
 
-    cache_key = f"{working_dir}::{ollama_host}::{model_name}::{timeout}"
+    cache_key = f"{working_dir_path}::{ollama_host}::{model_name}::{timeout}"
 
     if cache_key not in _mediallm_instances:
         _mediallm_instances[cache_key] = MediaLLM(
-            working_dir=working_dir,
+            working_dir=working_dir_path,
             ollama_host=ollama_host,
             model_name=model_name,
             timeout=timeout,
@@ -42,33 +43,91 @@ def get_mediallm_instance(working_dir: Optional[str] = None) -> MediaLLM:
     return _mediallm_instances[cache_key]
 
 
-async def execute_sync(func, *args, **kwargs):
+async def execute_sync(func: Any, *args: Any, **kwargs: Any) -> Any:
     """Execute synchronous function in thread pool."""
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, partial(func, *args, **kwargs))
 
 
 @mcp.tool()
-async def generate_command(
+async def generate_commands(
     request: str,
-    return_raw: bool = False,
     assume_yes: bool = True,
     workspace_dir: Optional[str] = None,
-    output_dir: Optional[str] = None
-) -> Any:
-    """Convert natural language to FFmpeg commands."""
+    output_dir: Optional[str] = None,
+) -> List[List[str]]:
+    """Generate FFmpeg commands from natural language.
+
+    Args:
+        request: Natural language description of the media operation.
+        assume_yes: If True, add -y flag to overwrite existing files.
+        workspace_dir: Directory containing media files to process.
+        output_dir: Directory for output files.
+
+    Returns:
+        List of FFmpeg commands, where each command is a list of arguments.
+    """
     mediallm = get_mediallm_instance(workspace_dir)
-    output_dir = os.environ.get("MEDIALLM_OUTPUT_DIR", "").strip()
-    output_dir = Path(output_dir).expanduser() if output_dir else None
-    
+    env_output_dir = os.environ.get("MEDIALLM_OUTPUT_DIR", "").strip()
+    effective_output_dir = (
+        Path(output_dir).expanduser()
+        if output_dir
+        else (Path(env_output_dir).expanduser() if env_output_dir else None)
+    )
 
     return await execute_sync(
-        mediallm.generate_command,
+        mediallm.generate_commands,
         request=request,
-        return_raw=return_raw,
         assume_yes=assume_yes,
-        output_dir=output_dir,
+        output_dir=effective_output_dir,
     )
+
+
+@mcp.tool()
+async def generate_plan(
+    request: str,
+    workspace_dir: Optional[str] = None,
+    output_dir: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Generate a command plan from natural language.
+
+    Returns a structured plan without building the final FFmpeg commands.
+    Useful for previewing what operations will be performed.
+
+    Args:
+        request: Natural language description of the media operation.
+        workspace_dir: Directory containing media files to process.
+        output_dir: Directory for output files.
+
+    Returns:
+        Dictionary containing the command plan with summary and entries.
+    """
+    mediallm = get_mediallm_instance(workspace_dir)
+    env_output_dir = os.environ.get("MEDIALLM_OUTPUT_DIR", "").strip()
+    effective_output_dir = (
+        Path(output_dir).expanduser()
+        if output_dir
+        else (Path(env_output_dir).expanduser() if env_output_dir else None)
+    )
+
+    plan = await execute_sync(
+        mediallm.generate_plan,
+        request=request,
+        output_dir=effective_output_dir,
+    )
+
+    return {
+        "summary": plan.summary,
+        "entries": [
+            {
+                "input": str(entry.input),
+                "output": str(entry.output),
+                "args": entry.args,
+                "extra_inputs": [str(p) for p in entry.extra_inputs] if entry.extra_inputs else [],
+            }
+            for entry in plan.entries
+        ],
+    }
 
 
 @mcp.tool()
@@ -76,9 +135,6 @@ async def scan_workspace(directory: Optional[str] = None) -> Dict[str, Any]:
     """Discover media files under the given directory."""
     mediallm = get_mediallm_instance(directory)
     return await execute_sync(mediallm.scan_workspace, directory=directory)
-
-
-# Removed legacy Starlette app builder; FastMCP manages HTTP/SSE.
 
 
 def run_stdio():

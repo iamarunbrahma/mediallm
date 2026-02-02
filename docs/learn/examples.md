@@ -16,18 +16,17 @@ Creating content for multiple platforms from a single source video:
 ls
 # raw_interview.mp4
 
-# Extract highlight clips
-mediallm "extract 30 seconds from raw_interview.mp4 starting at 2:15"
-mediallm "extract 15 seconds from raw_interview.mp4 starting at 5:30"
+# Extract highlight clips (trim from specific timestamps)
+mediallm "trim raw_interview.mp4 from 2:15 to 2:45"
+mediallm "trim raw_interview.mp4 from 5:30 to 5:45"
 
-# Create platform-specific versions
-mediallm "resize highlight1.mp4 to 1080x1080 square for Instagram"
-mediallm "resize highlight2.mp4 to 9:16 portrait for TikTok"
-mediallm "resize highlight1.mp4 to 1920x1080 for YouTube"
+# Convert to different formats
+mediallm "convert highlight1.mp4 to MP4 format"
+mediallm "compress highlight2.mp4 to smaller size"
 
 # Generate thumbnails
-mediallm "extract thumbnail from highlight1.mp4 at 5 seconds"
-mediallm "extract thumbnail from highlight2.mp4 at 3 seconds"
+mediallm "extract thumbnail from highlight1.mp4"
+mediallm "extract thumbnail from highlight2.mp4"
 
 # Create audio versions for podcasts
 mediallm "extract audio from raw_interview.mp4 as high quality MP3"
@@ -81,21 +80,21 @@ for video in workspace['videos']:
 
 ### Converting Legacy Formats
 
-Batch convert old video formats to modern standards:
+Convert old video formats to modern standards:
 
 ```bash
-# Convert all AVI files to MP4
-mediallm "convert all AVI files to MP4 with high quality settings"
+# Convert individual files to MP4
+mediallm "convert video.avi to MP4 format"
+mediallm "convert old_movie.mkv to MP4"
 
-# Modernize audio files
-mediallm "convert all WAV files to high quality AAC"
-
-# Standardize image formats
-mediallm "convert all BMP images to PNG format"
-
-# Extract metadata before conversion
+# Process files individually for best results
 for file in *.avi; do
- mediallm "extract thumbnail from $file at 10 seconds as ${file%.avi}_preview.jpg"
+ mediallm "convert $file to MP4 format"
+done
+
+# Extract thumbnails from videos
+for file in *.avi; do
+ mediallm "extract thumbnail from $file"
 done
 ```
 
@@ -150,25 +149,26 @@ for video in workspace['videos']:
 
 ### Lecture Processing
 
-Batch process recorded lectures for online distribution:
+Process recorded lectures for online distribution:
 
 ```bash
 # Directory with lecture recordings
 cd /path/to/lectures
 
-# Extract audio for podcast feed
-mediallm "extract audio from all MP4 files as high quality MP3 for podcasts"
-
-# Create quick preview clips (first 2 minutes)
+# Extract audio for podcast feed (process each file individually)
 for video in *.mp4; do
- mediallm "extract first 2 minutes from $video as ${video%.mp4}_preview.mp4"
+ mediallm "extract audio from $video as high quality MP3"
 done
 
-# Generate closed captions (if subtitle files exist)
-mediallm "burn subtitles from all SRT files into corresponding videos"
+# Create quick preview clips
+for video in *.mp4; do
+ mediallm "trim $video to first 2 minutes"
+done
 
-# Create mobile-friendly versions
-mediallm "convert all lecture videos to 720p MP4 optimized for mobile viewing"
+# Convert to web-friendly format
+for video in *.mp4; do
+ mediallm "compress $video to smaller size"
+done
 ```
 
 ### Training Material Creation

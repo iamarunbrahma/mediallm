@@ -244,7 +244,7 @@ class MediaFileHandler:
         return sanitized or "sanitized_file"
 
     @classmethod
-    def validate_ffmpeg_command(cls, cmd: list[str]) -> bool:
+    def validate_ffmpeg_command(cls, cmd: list[str], allowed_dirs: list[Path] | None = None) -> bool:
         """Validate ffmpeg command arguments for security."""
         if not cmd or not isinstance(cmd, list) or cmd[0] != "ffmpeg":
             return False
@@ -255,7 +255,7 @@ class MediaFileHandler:
         if cls._contains_dangerous_ampersand(cmd):
             return False
 
-        return cls._validate_flags_and_paths(cmd)
+        return cls._validate_flags_and_paths(cmd, allowed_dirs)
 
     @classmethod
     def sanitize_user_input(cls, user_input: str, max_length: int | None = None) -> str:
@@ -286,6 +286,19 @@ class MediaFileHandler:
         if not pattern or not isinstance(pattern, str):
             return False
 
+        if pattern.startswith("/") and (
+            pattern.startswith("/*")  # /*, /**/*.mp4
+            or pattern.startswith("/etc")
+            or pattern.startswith("/proc")
+            or pattern.startswith("/sys")
+            or pattern.startswith("/dev")
+            or pattern.startswith("/boot")
+        ):
+            return False
+
+        if pattern.startswith("\\") and pattern.startswith("\\*"):
+            return False
+
         pattern_lower = pattern.lower()
 
         for dangerous in cls._DANGEROUS_SEQUENCES:
@@ -307,12 +320,18 @@ class MediaFileHandler:
 
     @classmethod
     def _convert_to_path(cls, path: object) -> Path | None:
-        """Convert object to Path, validating it's not empty."""
+        """Convert object to Path, validating it's not empty and safe."""
         if not isinstance(path, Path):
             path_str_check = str(path)
             if not path_str_check or not path_str_check.strip():
                 return None
+            # Reject null byte injection attempts
+            if "\x00" in path_str_check:
+                return None
             return Path(path_str_check)
+        # Also check Path objects for null bytes in their string representation
+        if "\x00" in str(path):
+            return None
         return path
 
     @classmethod
@@ -452,7 +471,7 @@ class MediaFileHandler:
         return bool(re.search(r"(?<!H)\b&\b(?!H)", cmd_str))
 
     @classmethod
-    def _validate_flags_and_paths(cls, cmd: list[str]) -> bool:
+    def _validate_flags_and_paths(cls, cmd: list[str], allowed_dirs: list[Path] | None = None) -> bool:
         """Validate flags against allowlist and paths for safety."""
         i = 1  # Skip 'ffmpeg'
         while i < len(cmd):
@@ -463,7 +482,7 @@ class MediaFileHandler:
                     return False
                 if i + 1 < len(cmd) and not cmd[i + 1].startswith("-"):
                     i += 1  # Skip the value
-            elif not cls.is_safe_path(arg):
+            elif not cls.is_safe_path(arg, allowed_dirs):
                 return False
             i += 1
 
@@ -531,9 +550,9 @@ def sanitize_filename(filename: str, max_length: int = 255) -> str:
     return MediaFileHandler.sanitize_filename(filename, max_length)
 
 
-def validate_ffmpeg_command(cmd: list[str]) -> bool:
+def validate_ffmpeg_command(cmd: list[str], allowed_dirs: list[Path] | None = None) -> bool:
     """Validate ffmpeg command arguments for security."""
-    return MediaFileHandler.validate_ffmpeg_command(cmd)
+    return MediaFileHandler.validate_ffmpeg_command(cmd, allowed_dirs)
 
 
 def sanitize_user_input(user_input: str, max_length: int = 1000) -> str:

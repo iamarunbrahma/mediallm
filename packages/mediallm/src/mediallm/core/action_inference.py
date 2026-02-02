@@ -9,6 +9,7 @@ from typing import Any
 
 from ..constants.media_formats import ALL_EXTENSIONS
 from ..constants.media_formats import AUDIO_CODEC_MAP
+from ..constants.media_formats import IMAGE_FORMATS
 from ..constants.media_formats import VIDEO_AUDIO_CODEC_MAP
 from ..constants.media_formats import VIDEO_CODEC_MAP
 from ..processing.media_file_handler import most_recent_file
@@ -267,7 +268,22 @@ def infer_inputs_from_query(repaired: dict[str, Any], user_query: str, workspace
     # Smart fallback based on action type
     action = repaired.get("action", "convert")
 
-    if action in ["extract_audio", "compress", "convert", "trim", "overlay"]:
+    # Expanded list of actions that prefer video files
+    video_preferring_actions = [
+        "extract_audio",
+        "compress",
+        "convert",
+        "trim",
+        "segment",
+        "overlay",
+        "thumbnail",
+        "frames",
+        "extract_frames",
+        "remove_audio",
+        "format_convert",
+    ]
+
+    if action in video_preferring_actions:
         # Prefer video files for these actions
         videos = workspace.get("videos", [])
         if videos:
@@ -328,7 +344,8 @@ def infer_format_and_codec(repaired: dict[str, Any], user_query: str) -> None:
     detected_format = None
 
     # Check for all extensions in our format maps (prioritize longest matches)
-    all_formats = set(AUDIO_CODEC_MAP.keys()) | set(VIDEO_CODEC_MAP.keys())
+    # Include audio, video, and image formats
+    all_formats = set(AUDIO_CODEC_MAP.keys()) | set(VIDEO_CODEC_MAP.keys()) | IMAGE_FORMATS
 
     # Sort formats by length (longer first) to match specific formats like "jpeg" before "jpg"
     sorted_formats = sorted(all_formats, key=len, reverse=True)

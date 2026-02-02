@@ -207,6 +207,9 @@ known-first-party = ["mediallm"]
 "src/mediallm/core/task_router.py" = [
     "PLR0911"  # multiple return statements by design for summary builders
 ]
+"src/mediallm/analysis/ffprobe_analyzer.py" = [
+    "PLR0911"  # multiple return statements for error handling paths
+]
 
 # Pytest configuration (2025 modern best practices)
 [tool.pytest.ini_options]

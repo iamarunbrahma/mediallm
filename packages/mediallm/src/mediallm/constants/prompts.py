@@ -14,7 +14,7 @@ Respond ONLY with JSON matching the MediaIntent schema.
 
 <schema>
 Schema fields (all optional unless noted):
-  action (required): one of ['convert','trim','segment','overlay','thumbnail','extract_audio','compress','format_convert','extract_frames','burn_subtitles','extract_subtitles','slideshow']
+  action (required): one of ['convert','trim','segment','overlay','thumbnail','extract_audio','remove_audio','compress','format_convert','extract_frames','frames','burn_subtitles','extract_subtitles','slideshow']
   inputs: array of absolute file paths from workspace.videos / workspace.audios / workspace.images
   output: null or string filename (must NOT equal any input path)
   video_codec: e.g. 'libx264','libx265','copy'
@@ -50,6 +50,7 @@ Schema fields (all optional unless noted):
     - Image to video slideshow: use 'slideshow' action with video_codec='libx264'
     - Multiple images to video: use 'slideshow' action
     - Burn subtitles into video: use 'burn_subtitles' action with subtitle_path
+    - Remove/strip/mute audio from video: use 'remove_audio' action (NOT extract_audio)
   • When target format is specified (mp3, wav, mp4, avi, etc.), set format field accordingly (strip any leading dots, e.g., '.opus' becomes 'opus')
   • For 'convert' action on same-type files:
     - Video files (.mp4, .mov, .avi, .mkv, .webm, .flv, .wmv, .3gp, .m4v, .mpg, .mpeg, .ts, .m2ts, .mts, .vob, .ogv, .dv, .rm, .rmvb, .asf, .m2v, .f4v): video_codec='libx264', audio_codec='aac'
@@ -136,14 +137,29 @@ Schema fields (all optional unless noted):
   • Use absolute paths exactly as given in workspace.
 </quoting_portability>
 
+<output_format_rules>
+CRITICAL: The 'format' field MUST match the user's requested output format exactly:
+  • If user says "convert X to JPG/jpg", set format='jpg' (NOT png, NOT the input format)
+  • If user says "convert X to PNG/png", set format='png' (NOT jpg, NOT the input format)
+  • If user says "convert X to WAV/wav", set format='wav' (NOT mp3, NOT the input format)
+  • If user says "convert X to MP4/mp4", set format='mp4' (NOT the input format)
+  • If user says "convert X to GIF/gif", set format='gif' with proper GIF filters
+  • NEVER output the same format as the input when user explicitly requests a different format
+  • The output file extension MUST match the format field
+</output_format_rules>
+
 <examples>
 Examples (illustrative only — always use real workspace paths):
-  • Extract audio to MP3: action='extract_audio', format='mp3', audio_codec='libmp3lame'
-  • Convert MP4 to AVI: action='convert', format='avi', video_codec='libx264', audio_codec='aac'
-  • Convert MP3 to WAV: action='convert', format='wav', audio_codec='pcm_s16le'
-  • Convert audio to MP3: action='convert', format='mp3', audio_codec='libmp3lame'
-  • Convert OGG to FLAC: action='convert', format='flac', audio_codec='flac'
-  • Convert MP3 to OGG: action='convert', format='ogg', audio_codec='libvorbis'
+
+AUDIO CONVERSIONS (input and output must differ):
+  • "Convert MP3 to WAV": action='convert', format='wav', audio_codec='pcm_s16le'
+  • "Convert WAV to MP3": action='convert', format='mp3', audio_codec='libmp3lame'
+  • "Convert FLAC to MP3": action='convert', format='mp3', audio_codec='libmp3lame'
+  • "Convert OGG to MP3": action='convert', format='mp3', audio_codec='libmp3lame'
+  • "Convert MP3 to OGG": action='convert', format='ogg', audio_codec='libvorbis'
+  • "Convert WAV to FLAC": action='convert', format='flac', audio_codec='flac'
+  • "Convert M4A to MP3": action='convert', format='mp3', audio_codec='libmp3lame'
+  • "Convert AAC to WAV": action='convert', format='wav', audio_codec='pcm_s16le'
   • Convert to OGA: action='convert', format='oga', audio_codec='libvorbis'
   • Convert to MP2: action='convert', format='mp2', audio_codec='mp2'
   • Convert to AC3: action='convert', format='ac3', audio_codec='ac3'
@@ -154,23 +170,77 @@ Examples (illustrative only — always use real workspace paths):
   • Convert to M4A: action='convert', format='m4a', audio_codec='alac'
   • Convert to DTS: action='convert', format='dts', audio_codec='dca'
   • Convert to RealAudio: action='convert', format='ra', audio_codec='real_144'
-  • Convert PNG to BMP: action='convert', format='bmp'
-  • Convert JPG to PNG: action='convert', format='png'
-  • Convert image to WebP: action='convert', format='webp'
-  • Convert SRT to VTT: action='convert', format='vtt'
-  • Convert VTT to SRT: action='convert', format='srt'
-  • Convert ASS to SRT: action='convert', format='srt'
-  • Create slideshow from images: action='slideshow', video_codec='libx264', audio_codec='aac', duration=2
-  • Burn SRT subtitles: action='burn_subtitles', subtitle_path='/abs/path.srt', filters='subtitles=/abs/path.srt'
-  • Extract subtitles from video: action='extract_subtitles', format='srt'
-  • Instagram Reel (crop/fill): action='convert', filters='scale=-2:1920:force_original_aspect_ratio=increase,crop=1080:1920'
-  • Instagram Reel (pad): action='convert', filters='scale=1080:-2:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2'
-  • Convert to GIF: action='convert', filters='fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse', video_codec='gif', audio_codec='none'
-  • Convert to GIF with duration: action='convert', filters='fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse', video_codec='gif', audio_codec='none', duration=5
-  • 5 second GIF: action='convert', filters='fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse', video_codec='gif', audio_codec='none', duration=5
-  • 10 second video clip: action='convert', video_codec='libx264', audio_codec='aac', duration=10
-  • Convert to WebM: action='convert', video_codec='libvpx-vp9', audio_codec='libopus'
-  • Burn subtitles: add ',subtitles=/abs/path.srt' at the end of the chain.
+
+IMAGE CONVERSIONS (format field determines output, NO video/audio codecs):
+  • "Convert PNG to JPG": action='convert', format='jpg'
+  • "Convert JPG to PNG": action='convert', format='png'
+  • "Convert PNG to BMP": action='convert', format='bmp'
+  • "Convert BMP to PNG": action='convert', format='png'
+  • "Convert image to WebP": action='convert', format='webp'
+  • "Convert TIFF to JPG": action='convert', format='jpg'
+
+VIDEO CONVERSIONS:
+  • "Convert MP4 to AVI": action='convert', format='avi', video_codec='libx264', audio_codec='mp3'
+  • "Convert AVI to MP4": action='convert', format='mp4', video_codec='libx264', audio_codec='aac'
+  • "Convert MKV to MP4": action='convert', format='mp4', video_codec='libx264', audio_codec='aac'
+  • "Convert MOV to MP4": action='convert', format='mp4', video_codec='libx264', audio_codec='aac'
+  • "Convert WebM to MP4": action='convert', format='mp4', video_codec='libx264', audio_codec='aac'
+  • "Convert MP4 to WebM": action='convert', format='webm', video_codec='libvpx-vp9', audio_codec='libopus'
+  • "Convert GIF to MP4": action='convert', format='mp4', video_codec='libx264', audio_codec='aac'
+  • "Convert FLV to MP4": action='convert', format='mp4', video_codec='libx264', audio_codec='aac'
+  • "Convert 3GP to MP4": action='convert', format='mp4', video_codec='libx264', audio_codec='aac'
+
+AUDIO EXTRACTION FROM VIDEO:
+  • "Extract audio to MP3": action='extract_audio', format='mp3', audio_codec='libmp3lame'
+  • "Extract audio from video": action='extract_audio', format='mp3', audio_codec='libmp3lame'
+
+GIF CREATION (always include the full filter chain):
+  • "Create GIF from video": action='convert', format='gif', filters='fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse', video_codec='gif', audio_codec='none'
+  • "5 second GIF": action='convert', format='gif', filters='fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse', video_codec='gif', audio_codec='none', duration=5
+  • "Create GIF first 3 seconds": action='convert', format='gif', filters='fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse', video_codec='gif', audio_codec='none', duration=3
+
+THUMBNAIL/FRAME EXTRACTION:
+  • "Extract thumbnail": action='thumbnail', format='png'
+  • "Extract frame at 2 seconds": action='thumbnail', format='png', start='2'
+  • "Get screenshot from video": action='thumbnail', format='jpg'
+
+VIDEO TRIMMING:
+  • "Trim to first 5 seconds": action='trim', duration=5
+  • "Trim from 0 to 10 seconds": action='trim', start='0', end='10'
+  • "Cut video from 1:00 to 2:00": action='trim', start='00:01:00', end='00:02:00'
+  • "10 second video clip": action='trim', duration=10
+
+SUBTITLE OPERATIONS:
+  • "Convert SRT to VTT": action='convert', format='vtt'
+  • "Convert VTT to SRT": action='convert', format='srt'
+  • "Convert ASS to SRT": action='convert', format='srt'
+  • "Burn SRT subtitles": action='burn_subtitles', subtitle_path='/abs/path.srt', filters='subtitles=/abs/path.srt'
+  • "Extract subtitles from video": action='extract_subtitles', format='srt'
+
+SLIDESHOW:
+  • "Create slideshow from images": action='slideshow', video_codec='libx264', audio_codec='aac', duration=2
+
+REMOVE AUDIO FROM VIDEO:
+  • "Remove audio from video": action='remove_audio'
+  • "Make video silent": action='remove_audio'
+  • "Strip audio track": action='remove_audio'
+
+VIDEO EFFECTS (fade, blur, etc.):
+  • "Add fade in effect": action='convert', filters='fade=in:0:30'
+  • "Add fade out effect": action='convert', filters='fade=out:0:30'
+  • "Fade in first 2 seconds": action='convert', filters='fade=t=in:st=0:d=2'
+  • "Fade out last 2 seconds": action='convert', filters='fade=t=out:st=8:d=2' (adjust st based on video length)
+  • "Add fade in and fade out": action='convert', filters='fade=in:0:25,fade=out:0:25'
+
+AUDIO EFFECTS (volume, fade):
+  • "Reduce audio volume by 50%": action='convert', filters='volume=0.5'
+  • "Increase volume by 2x": action='convert', filters='volume=2.0'
+  • "Add audio fade in": action='convert', filters='afade=t=in:st=0:d=3'
+  • "Add audio fade out": action='convert', filters='afade=t=out:st=0:d=3'
+
+SOCIAL MEDIA:
+  • "Instagram Reel (crop/fill)": action='convert', filters='scale=-2:1920:force_original_aspect_ratio=increase,crop=1080:1920'
+  • "Instagram Reel (pad)": action='convert', filters='scale=1080:-2:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2'
 </examples>
 
 <final_instruction>

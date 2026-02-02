@@ -27,17 +27,23 @@ keywords = [
     "video"
 ]
 dependencies = [
-    "fastmcp>=2.0.0",
-    "mcp>=1.0.0",
-    "mediallm",
-    "starlette>=0.27.0",
-    "uvicorn>=0.23.0"
+    "fastmcp>=2.0.0,<3.0.0",
+    "mcp>=1.0.0,<2.0.0",
+    "mediallm>=0.0.4,<0.1.0",
 ]
+
+[tool.uv.sources]
+mediallm = { path = "../mediallm", editable = true }
 
 [project.optional-dependencies]
 dev = [
     "black>=23.0.0",
     "ruff>=0.1.0"
+]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-timeout>=2.1.0",
 ]
 
 [project.scripts]
@@ -58,10 +64,35 @@ path = "src/mediallm_mcp/__about__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/mediallm_mcp"]
 
+# Ruff configuration - aligned with mediallm package
 [tool.ruff]
+line-length = 120
+target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+select = [
+    "E",      # pycodestyle errors
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "PT",     # flake8-pytest-style
+    "SIM",    # flake8-simplify
+    "TCH",    # flake8-type-checking
+]
 ignore = []
 fixable = ["ALL"]
 unfixable = []
+
+[tool.ruff.lint.isort]
+force-single-line = true
+known-first-party = ["mediallm_mcp", "mediallm"]
+
+# Pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+]
