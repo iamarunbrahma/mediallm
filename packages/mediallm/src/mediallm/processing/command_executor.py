@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import shutil
 import subprocess  # nosec B404: subprocess used with explicit list args, no shell
 import time
@@ -22,12 +23,34 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Security constants for subprocess execution
+DEFAULT_SUBPROCESS_TIMEOUT: Final[int] = 300  # 5 minutes
+MAX_OUTPUT_SIZE: Final[int] = 10 * 1024 * 1024  # 10MB
+
 
 class CommandExecutor:
     """Handles FFmpeg command execution with security validation and progress tracking."""
 
-    # Class constants
-    _DANGEROUS_PATTERNS: Final[list[str]] = ["rm", "del", "format", "system", "exec"]
+    _DANGEROUS_PATTERNS: Final[list[re.Pattern[str]]] = [
+        re.compile(r"\brm\s+-rf?\b", re.IGNORECASE),
+        re.compile(r"\brm\s+", re.IGNORECASE),
+        re.compile(r"\bdel\s+/[sfq]\b", re.IGNORECASE),
+        re.compile(r"\bdel\s+", re.IGNORECASE),
+        re.compile(r"\bformat\s+[a-z]:", re.IGNORECASE),
+        re.compile(r"\bsystem\s*\(", re.IGNORECASE),
+        re.compile(r"\bexec\s*\(", re.IGNORECASE),
+        re.compile(r"\beval\s*\(", re.IGNORECASE),
+        re.compile(r"[&|`]"),
+        re.compile(r"\$\("),
+        re.compile(r"\$\{"),
+        re.compile(r">\s*[/\\]"),
+        re.compile(r"\bsudo\b", re.IGNORECASE),
+        re.compile(r"\bchmod\b", re.IGNORECASE),
+        re.compile(r"\bchown\b", re.IGNORECASE),
+        re.compile(r"\bmkfs\b", re.IGNORECASE),
+        re.compile(r"\bdd\s+if=", re.IGNORECASE),
+    ]
+    _FILTER_FLAGS: Final[set[str]] = {"-vf", "-af", "-filter_complex", "-filter:v", "-filter:a"}
     _VALID_EXECUTABLES: Final[set[str]] = {"ffmpeg", "ffprobe"}
     _RENDER_DELAY: Final[float] = 0.5
 
@@ -204,20 +227,41 @@ class CommandExecutor:
         )
         return final_result
 
-    def _execute_single_command(self, cmd: list[str], cmd_num: int, total_cmds: int) -> None:
-        """Execute a single ffmpeg command with progress feedback."""
+    def _execute_single_command(
+        self, cmd: list[str], cmd_num: int, total_cmds: int, timeout: int | None = None
+    ) -> None:
+        """Execute a single ffmpeg command with progress feedback and timeout.
+
+        Args:
+            cmd: The FFmpeg command to execute as a list of arguments.
+            cmd_num: Current command number in the batch.
+            total_cmds: Total number of commands in the batch.
+            timeout: Timeout in seconds (defaults to DEFAULT_SUBPROCESS_TIMEOUT).
+        """
         logger.debug(f"Validating command {cmd_num}: {' '.join(cmd)}")
         self._validate_command(cmd)
 
+        effective_timeout = timeout or DEFAULT_SUBPROCESS_TIMEOUT
         output_path = self.extract_output_path(cmd)
         logger.debug(f"Command {cmd_num} output path: {output_path}")
         self.console.print(f"[bold blue]Executing command {cmd_num}/{total_cmds}:[/bold blue]")
         self.console.print(f"[dim]Output:[/dim] {output_path}")
 
         try:
-            logger.debug(f"Starting subprocess execution for command {cmd_num}")
-            result = subprocess.run(cmd, check=True)  # nosec B603: fixed binary, no shell, args vetted
+            logger.debug(f"Starting subprocess execution for command {cmd_num} (timeout={effective_timeout}s)")
+            # nosec B603: fixed binary, no shell, args vetted
+            result = subprocess.run(
+                cmd,
+                check=True,
+                timeout=effective_timeout,
+                capture_output=True,
+            )
             logger.debug(f"Subprocess completed for command {cmd_num} with return code: {result.returncode}")
+
+            # Check output size limits
+            if result.stdout and len(result.stdout) > MAX_OUTPUT_SIZE:
+                logger.warning(f"Command {cmd_num} output exceeds size limit, truncating logs")
+
             if result.returncode != 0:
                 raise ExecError(
                     f"ffmpeg command failed with exit code {result.returncode}. "
@@ -227,11 +271,23 @@ class CommandExecutor:
                     f"(4) permission issues. Check file paths and try again."
                 )
             self.console.print(f"[green]Command {cmd_num} completed successfully[/green]")
+
+        except subprocess.TimeoutExpired as exc:
+            logger.error(f"Command {cmd_num} timed out after {effective_timeout}s")
+            raise ExecError(
+                f"FFmpeg command timed out after {effective_timeout} seconds. "
+                f"This may be due to: (1) very large input file, "
+                f"(2) complex encoding operation, "
+                f"(3) insufficient system resources. "
+                f"Try increasing the timeout or processing smaller files."
+            ) from exc
         except subprocess.CalledProcessError as exc:
             logger.error(f"ffmpeg execution failed for command {cmd_num}: {exc}")
             logger.debug(f"Failed command details: {' '.join(cmd)}")
+            stderr_msg = exc.stderr.decode() if exc.stderr else ""
             raise ExecError(
                 f"ffmpeg execution failed with error: {exc}. "
+                f"{f'Details: {stderr_msg[:500]}' if stderr_msg else ''}"
                 f"Please verify: (1) input files exist and are readable, "
                 f"(2) output directory is writable, "
                 f"(3) ffmpeg is properly installed (try 'ffmpeg -version'), "
@@ -276,12 +332,40 @@ class CommandExecutor:
             )
 
     def _is_command_secure(self, command: list[str]) -> bool:
-        """Basic validation of ffmpeg command."""
+        """Validate FFmpeg command using regex-based pattern matching.
+
+        Uses word boundary patterns to prevent false positives (e.g., "format"
+        should not match "formatting", "rm" should not match "arm").
+
+        Special handling for FFmpeg filter arguments which legitimately use
+        semicolons in complex filtergraph syntax.
+        """
         if not command or not any(command[0].endswith(exe) for exe in self._VALID_EXECUTABLES):
             return False
 
-        cmd_str = " ".join(command).lower()
-        return not any(pattern in cmd_str for pattern in self._DANGEROUS_PATTERNS)
+        # Separate filter arguments from other arguments
+        non_filter_args = []
+        i = 0
+        while i < len(command):
+            arg = command[i]
+            if arg in self._FILTER_FLAGS and i + 1 < len(command):
+                # Skip filter flag and its value (which may contain semicolons)
+                i += 2
+            else:
+                non_filter_args.append(arg)
+                i += 1
+
+        # Check non-filter arguments for dangerous patterns
+        cmd_str = " ".join(non_filter_args)
+        if any(pattern.search(cmd_str) for pattern in self._DANGEROUS_PATTERNS):
+            return False
+
+        # Check for semicolons outside of filter arguments (potential command injection)
+        for arg in non_filter_args:
+            if ";" in arg:
+                return False
+
+        return True
 
     def _display_execution_summary(
         self, successful_commands: int, total_commands: int, output_dir: Path | None
@@ -312,10 +396,10 @@ class CommandExecutor:
         # Avoid static import to prevent cycles; dynamic import tolerated
         try:
             module = __import__(
-                "mediallm.interface.terminal_interface",
-                fromlist=["_display_completion_summary"],
+                "mediallm.interface.display_utils",
+                fromlist=["display_completion_summary"],
             )
-            display_fn = getattr(module, "_display_completion_summary", None)
+            display_fn = getattr(module, "display_completion_summary", None)
             if callable(display_fn):
                 display_fn(output_dir)
         except Exception:

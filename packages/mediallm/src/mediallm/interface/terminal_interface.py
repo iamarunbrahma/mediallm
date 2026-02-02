@@ -18,9 +18,11 @@ from ..processing.command_executor import detect_overwrites
 from ..processing.command_executor import preview
 from ..processing.command_executor import preview_modified_commands
 from ..processing.command_executor import run
+from ..processing.command_retry import create_retry_handler
 from ..utils.config import AppConfig
 from ..utils.config import load_config
 from ..utils.exceptions import ConfigError
+from ..utils.exceptions import ExecError
 from .command_handlers import enhance_command
 from .command_handlers import explain_command
 from .command_handlers import nl_command
@@ -167,6 +169,9 @@ def _execute_one_shot_command(prompt: str, cfg: AppConfig, yes: bool) -> None:
         adapter = OllamaAdapter(host=cfg.ollama_host, model_name=cfg.model_name)
         llm = LLM(adapter)
 
+        # Create retry handler for execution with retry capability
+        retry_handler = create_retry_handler(llm, console)
+
         # Show spinner while waiting for LLM response and processing
         try:
             with show_llm_spinner(console, "your ffmpeg command"):
@@ -177,7 +182,11 @@ def _execute_one_shot_command(prompt: str, cfg: AppConfig, yes: bool) -> None:
             reset_terminal_state()
             raise
 
-        # command executor helpers are imported at module level
+        # Pre-validate commands before showing preview
+        for i, cmd in enumerate(commands):
+            is_valid, error_msg = retry_handler.validate_ffmpeg_command(cmd)
+            if not is_valid:
+                logger.warning(f"Command {i+1} pre-validation warning: {error_msg}")
 
         # Always show preview before asking for confirmation
         preview(commands)
@@ -201,20 +210,49 @@ def _execute_one_shot_command(prompt: str, cfg: AppConfig, yes: bool) -> None:
             )
         )
 
-        code = run(
-            commands,
-            confirm=confirmed,
-            dry_run=cfg.dry_run,
-            show_preview=False,
-            assume_yes=yes,
-            output_dir=None,
-        )
-        raise typer.Exit(code)
+        if not confirmed:
+            console.print("[bold green]Execution cancelled by user[/bold green]")
+            raise typer.Exit(0)
+
+        if cfg.dry_run:
+            console.print("[bold yellow]Dry run mode - no commands will be executed[/bold yellow]")
+            raise typer.Exit(0)
+
+        # Define executor function for retry handler
+        def executor_func(cmds: list[list[str]]) -> int:
+            return run(
+                cmds,
+                confirm=True,  # Already confirmed above
+                dry_run=False,  # Already checked above
+                show_preview=False,
+                assume_yes=yes,
+                output_dir=None,
+            )
+
+        # Execute with retry logic (up to 3 attempts on failure)
+        try:
+            code, final_commands = retry_handler.execute_with_retry(
+                original_prompt=processed_prompt,
+                workspace=context,
+                plan=plan,
+                commands=commands,
+                executor_func=executor_func,
+                timeout=cfg.timeout_seconds,
+                assume_yes=yes,
+            )
+            raise typer.Exit(code)
+        except ExecError as e:
+            # All retry attempts failed
+            clean_msg = get_clean_error_message(e)
+            console.print(f"[red]x Execution failed after retries:[/red] {clean_msg}")
+            raise typer.Exit(1) from e
 
     except ValueError as e:
         clean_msg = get_clean_error_message(e)
         console.print(f"[red]x Error:[/red] {clean_msg}")
         raise typer.Exit(1) from e
+    except typer.Exit:
+        raise  # Re-raise typer.Exit without modification
     except Exception as e:
         clean_msg = get_clean_error_message(e)
         console.print(f"[red]x Error:[/red] {clean_msg}")

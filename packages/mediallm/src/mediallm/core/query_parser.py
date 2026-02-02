@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
+from typing import Final
 
 from pydantic import ValidationError
 
@@ -15,9 +17,15 @@ from ..safety.data_protection import create_secure_logger
 from ..utils.data_models import MediaIntent
 from ..utils.exceptions import ParseError
 from ..utils.exceptions import TranslationError
+from ..utils.exceptions import ValidationError as MediaLLMValidationError
 from .json_repair import JSONRepair
 
 logger = create_secure_logger(__name__)
+
+# Security constants for input validation
+MAX_QUERY_LENGTH: Final[int] = 10000
+# Pattern to detect shell metacharacters that should never appear in natural language queries
+_SHELL_METACHAR_PATTERN: Final[re.Pattern[str]] = re.compile(r"[;&|`$(){}\[\]<>\\]")
 
 
 class QueryParser:
@@ -29,9 +37,35 @@ class QueryParser:
         self._json_repair = JSONRepair()
 
     def parse_query(self, user_query: str, workspace: dict[str, Any], timeout: int | None = None) -> MediaIntent:
-        """Parse natural language query into MediaIntent with retry logic."""
-        # Sanitize user input first to prevent injection attacks
-        sanitized_query = sanitize_user_input(user_query)
+        """Parse natural language query into MediaIntent with retry logic.
+
+        Args:
+            user_query: The natural language query from the user.
+            workspace: Dictionary containing discovered media files.
+            timeout: Optional timeout for the LLM request in seconds.
+
+        Returns:
+            MediaIntent representing the parsed user request.
+
+        Raises:
+            TranslationError: If the query cannot be parsed.
+            SecurityError: If the query contains potentially malicious content.
+            ValidationError: If the query fails validation.
+        """
+        # Validate input length first
+        if len(user_query) > MAX_QUERY_LENGTH:
+            raise MediaLLMValidationError(
+                f"Request exceeds maximum length of {MAX_QUERY_LENGTH} characters. "
+                "Please shorten your request."
+            )
+
+        # Check for shell metacharacters that shouldn't appear in natural language
+        if _SHELL_METACHAR_PATTERN.search(user_query):
+            logger.warning(f"Query contains shell metacharacters: {user_query[:100]}...")
+            # We don't block, but we sanitize aggressively
+
+        # Sanitize user input to prevent injection attacks
+        sanitized_query = sanitize_user_input(user_query, max_length=MAX_QUERY_LENGTH)
 
         if not sanitized_query.strip():
             raise TranslationError(
@@ -70,7 +104,11 @@ class QueryParser:
                 logger.warning("Empty response from model, using fallback")
                 data = {}
             else:
-                data = json.loads(raw)
+                # Extract JSON from response that may contain explanatory text
+                cleaned_raw = self._json_repair.extract_json_from_text(raw)
+                if cleaned_raw != raw:
+                    logger.debug(f"Extracted JSON from response (original: {len(raw)} chars, cleaned: {len(cleaned_raw)} chars)")
+                data = json.loads(cleaned_raw)
 
             return self._process_response_data(data, optimized_request, workspace)
 
@@ -163,7 +201,9 @@ class QueryParser:
                 timeout=timeout,
             )
 
-            data2 = json.loads(raw2)
+            # Extract JSON from retry response as well
+            cleaned_raw2 = self._json_repair.extract_json_from_text(raw2)
+            data2 = json.loads(cleaned_raw2)
             return self._process_response_data(data2, optimized_request, workspace)
 
         except ValidationError as retry_validation_err:

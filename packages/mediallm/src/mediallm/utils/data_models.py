@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 # Author: Arun Brahma
 
-#!/usr/bin/env python3
-# Author: Arun Brahma
-
 from __future__ import annotations
 
 from enum import Enum
@@ -43,28 +40,23 @@ class MediaTaskProcessor:
         return f"{h:02d}:{m:02d}:{s:02d}"
 
 
-def _seconds_to_timestamp(value: float | int | str) -> str:
-    """Convert numeric seconds to HH:MM:SS[.ms] timestamp format."""
-    return MediaTaskProcessor.seconds_to_timestamp(value)
-
-
 class Action(str, Enum):
-    """Supported ffmpeg operations for natural language processing."""
+    """Supported ffmpeg operations."""
 
-    convert = "convert"  # General format conversion
-    extract_audio = "extract_audio"  # Extract audio track to separate file
-    remove_audio = "remove_audio"  # Remove audio track from video
-    trim = "trim"  # Cut video to specific time range
-    segment = "segment"  # Extract segment (alias for trim)
-    thumbnail = "thumbnail"  # Extract single frame as image
-    frames = "frames"  # Extract multiple frames at specified FPS
-    extract_frames = "extract_frames"  # Extract frames at specified intervals
-    compress = "compress"  # Compress with quality settings
-    overlay = "overlay"  # Overlay image/video on top of video
-    format_convert = "format_convert"  # Convert to specific format
-    burn_subtitles = "burn_subtitles"  # Burn subtitles into video
-    extract_subtitles = "extract_subtitles"  # Extract subtitles from video
-    slideshow = "slideshow"  # Create video slideshow from images
+    convert = "convert"
+    extract_audio = "extract_audio"
+    remove_audio = "remove_audio"
+    trim = "trim"
+    segment = "segment"
+    thumbnail = "thumbnail"
+    frames = "frames"
+    extract_frames = "extract_frames"
+    compress = "compress"
+    overlay = "overlay"
+    format_convert = "format_convert"
+    burn_subtitles = "burn_subtitles"
+    extract_subtitles = "extract_subtitles"
+    slideshow = "slideshow"
 
 
 class MediaIntent(BaseModel):
@@ -87,9 +79,9 @@ class MediaIntent(BaseModel):
     fps: str | None = None
     glob: str | None = None
     extra_flags: list[str] = Field(default_factory=list)
-    quality: str | None = None  # For quality settings
-    format: str | None = None  # For format conversion
-    subtitle_path: Path | None = None  # For subtitle operations
+    quality: str | None = None
+    format: str | None = None
+    subtitle_path: Path | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -97,34 +89,30 @@ class MediaIntent(BaseModel):
         """Pre-validate data coercion for common patterns."""
         if not isinstance(values, dict):
             return values
-        # inputs: allow scalar -> [scalar] for single file operations
+
         inputs = values.get("inputs")
         if inputs is not None and not isinstance(inputs, list):
             values["inputs"] = [inputs]
-        # filters: allow scalar -> [str(scalar)] for single filter
+
         filters = values.get("filters")
         if filters is not None and not isinstance(filters, list):
             values["filters"] = [str(filters)]
-        # extra_flags: allow scalar -> [str(scalar)] for single flag
+
         extra_flags = values.get("extra_flags")
         if extra_flags is not None and not isinstance(extra_flags, list):
             values["extra_flags"] = [str(extra_flags)]
 
-        # Ensure None values are converted to empty lists
         if values.get("filters") is None:
             values["filters"] = []
         if values.get("extra_flags") is None:
             values["extra_flags"] = []
 
-        # Filter out empty strings from filters and extra_flags lists
         if isinstance(values.get("filters"), list):
             values["filters"] = [f for f in values["filters"] if f and f.strip()]
         if isinstance(values.get("extra_flags"), list):
             values["extra_flags"] = [f for f in values["extra_flags"] if f and f.strip()]
 
-        # Fix empty string values for numeric fields
         cls._clean_empty_numeric_fields(values)
-
         return values
 
     @classmethod
@@ -135,17 +123,14 @@ class MediaIntent(BaseModel):
             if values.get(field) == "":
                 values[field] = None
 
-        # start/end: allow numeric seconds -> HH:MM:SS[.ms] for convenience
         if "start" in values and not isinstance(values.get("start"), str):
             values["start"] = MediaTaskProcessor.seconds_to_timestamp(values["start"])
         if "end" in values and not isinstance(values.get("end"), str):
             values["end"] = MediaTaskProcessor.seconds_to_timestamp(values["end"])
 
-        # fps: allow numeric values -> string
         if "fps" in values and not isinstance(values.get("fps"), str):
             values["fps"] = str(values["fps"])
 
-        # glob: allow any value -> string or None
         if "glob" in values and values.get("glob") is not None:
             values["glob"] = str(values["glob"])
 
@@ -166,14 +151,12 @@ class MediaIntent(BaseModel):
         if self.action == Action.extract_audio and not self.inputs:
             raise ValueError("extract_audio requires an input file")
 
-        # Add validation for new actions
         if self.action == Action.extract_frames and not self.fps:
             raise ValueError("extract_frames requires fps parameter")
 
         if self.action == Action.format_convert and not self.format:
             raise ValueError("format_convert requires format parameter")
 
-        # Ensure incompatible combos are caught
         if self.action == Action.thumbnail and self.fps:
             raise ValueError("thumbnail is incompatible with fps; use frames action")
 

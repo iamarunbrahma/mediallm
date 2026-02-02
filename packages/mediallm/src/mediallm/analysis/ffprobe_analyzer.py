@@ -4,21 +4,41 @@
 from __future__ import annotations
 
 import json
+import logging
 import shutil
 import subprocess  # nosec B404: subprocess is used safely with explicit args and no shell
 from pathlib import Path
+from typing import Final
 
 # Import media extensions from constants
 from ..constants.media_formats import MEDIA_EXTENSIONS as MEDIA_EXTS
 
+logger = logging.getLogger(__name__)
 
-def _ffprobe_duration(path: Path) -> float | None:
-    """Extract duration of media file using ffprobe."""
+# Security constants for subprocess execution
+DEFAULT_FFPROBE_TIMEOUT: Final[int] = 60  # 1 minute for metadata extraction
+MAX_FFPROBE_OUTPUT_SIZE: Final[int] = 1024 * 1024  # 1MB for metadata
+
+
+def _ffprobe_duration(path: Path, timeout: int | None = None) -> float | None:
+    """Extract duration of media file using ffprobe.
+
+    Args:
+        path: Path to the media file.
+        timeout: Timeout in seconds (defaults to DEFAULT_FFPROBE_TIMEOUT).
+
+    Returns:
+        Duration in seconds, or None if extraction fails.
+    """
     ffprobe_path = shutil.which("ffprobe")
     if ffprobe_path is None:
+        logger.debug("ffprobe not found in PATH")
         return None
+
+    effective_timeout = timeout or DEFAULT_FFPROBE_TIMEOUT
+
     try:
-        # Call ffprobe with explicit args and no shell for security
+        # Call ffprobe with explicit args, no shell, and timeout for security
         result = subprocess.run(  # nosec B603, B607
             [
                 "ffprobe",
@@ -33,12 +53,29 @@ def _ffprobe_duration(path: Path) -> float | None:
             capture_output=True,
             check=True,
             text=True,
+            timeout=effective_timeout,
         )
+
+        # Check output size limit
+        if len(result.stdout) > MAX_FFPROBE_OUTPUT_SIZE:
+            logger.warning(f"ffprobe output exceeds size limit for {path}")
+            return None
+
         data = json.loads(result.stdout)
         dur = data.get("format", {}).get("duration")
         return float(dur) if dur is not None else None
-    except Exception:
-        # Return None for any ffprobe errors (file not found, invalid format, etc.)
+
+    except subprocess.TimeoutExpired:
+        logger.warning(f"ffprobe timed out after {effective_timeout}s for {path}")
+        return None
+    except json.JSONDecodeError as e:
+        logger.warning(f"Failed to parse ffprobe JSON output for {path}: {e}")
+        return None
+    except subprocess.CalledProcessError as e:
+        logger.debug(f"ffprobe failed for {path}: {e}")
+        return None
+    except OSError as e:
+        logger.debug(f"OS error running ffprobe for {path}: {e}")
         return None
 
 
