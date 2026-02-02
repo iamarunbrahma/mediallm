@@ -32,6 +32,9 @@ dependencies = [
     "mediallm>=0.0.4,<0.1.0",
 ]
 
+[tool.uv.sources]
+mediallm = { path = "../mediallm", editable = true }
+
 [project.optional-dependencies]
 dev = [
     "black>=23.0.0",

@@ -23,9 +23,10 @@ class CommandBuilder:
     # Pre-input flags that should come before -i
     _PRE_INPUT_FLAGS: ClassVar[set[str]] = {"-ss", "-t", "-to"}
 
-    def __init__(self) -> None:
+    def __init__(self, allowed_dirs: list[Path] | None = None) -> None:
         """Initialize the command builder."""
         self._file_detector = FileTypeDetector()
+        self._allowed_dirs = allowed_dirs
 
     def construct_operations(self, execution_plan: CommandPlan, assume_yes: bool = False) -> list[list[str]]:
         """Build executable ffmpeg commands from a command execution_plan."""
@@ -192,13 +193,15 @@ class CommandBuilder:
 
     def _validate_command(self, cmd: list[str]) -> bool:
         """Validate the generated command for security."""
-        result = validate_ffmpeg_command(cmd)
+        result = validate_ffmpeg_command(cmd, self._allowed_dirs)
         logger.debug(f"Command validation result: {result}")
         return result
 
 
 # Module-level function for backward compatibility
-def construct_operations(execution_plan: CommandPlan, assume_yes: bool = False) -> list[list[str]]:
+def construct_operations(
+    execution_plan: CommandPlan, assume_yes: bool = False, allowed_dirs: list[Path] | None = None
+) -> list[list[str]]:
     """Build executable ffmpeg commands from a command execution_plan."""
-    builder = CommandBuilder()
+    builder = CommandBuilder(allowed_dirs=allowed_dirs)
     return builder.construct_operations(execution_plan, assume_yes)

@@ -239,7 +239,8 @@ class MediaLLM:
             ConfigError: If there's an issue with the Ollama configuration.
         """
         plan = self.generate_plan(request, output_dir=output_dir)
-        return construct_operations(plan, assume_yes=assume_yes)
+        allowed_dirs = [self._working_dir]
+        return construct_operations(plan, assume_yes=assume_yes, allowed_dirs=allowed_dirs)
 
     def generate_command(
         self,
