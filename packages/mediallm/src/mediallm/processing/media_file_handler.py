@@ -286,6 +286,19 @@ class MediaFileHandler:
         if not pattern or not isinstance(pattern, str):
             return False
 
+        if pattern.startswith("/") and (
+            pattern.startswith("/*")  # /*, /**/*.mp4
+            or pattern.startswith("/etc")
+            or pattern.startswith("/proc")
+            or pattern.startswith("/sys")
+            or pattern.startswith("/dev")
+            or pattern.startswith("/boot")
+        ):
+            return False
+
+        if pattern.startswith("\\") and pattern.startswith("\\*"):
+            return False
+
         pattern_lower = pattern.lower()
 
         for dangerous in cls._DANGEROUS_SEQUENCES:
@@ -307,12 +320,18 @@ class MediaFileHandler:
 
     @classmethod
     def _convert_to_path(cls, path: object) -> Path | None:
-        """Convert object to Path, validating it's not empty."""
+        """Convert object to Path, validating it's not empty and safe."""
         if not isinstance(path, Path):
             path_str_check = str(path)
             if not path_str_check or not path_str_check.strip():
                 return None
+            # Reject null byte injection attempts
+            if "\x00" in path_str_check:
+                return None
             return Path(path_str_check)
+        # Also check Path objects for null bytes in their string representation
+        if "\x00" in str(path):
+            return None
         return path
 
     @classmethod

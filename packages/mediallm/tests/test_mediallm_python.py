@@ -17,6 +17,7 @@ from mediallm.utils.data_models import CommandEntry
 from mediallm.utils.data_models import CommandPlan
 from mediallm.utils.data_models import MediaIntent
 from mediallm.utils.exceptions import TranslationError
+from mediallm.utils.exceptions import ValidationError
 
 
 class TestMediaLLMInitialization:
@@ -79,6 +80,13 @@ class TestMediaLLMInitialization:
         """Test MediaLLM initialization failure when Ollama is not available."""
         mock_ollama = Mock()
         mock_ollama.Client.side_effect = Exception("Connection refused")
+
+        # Create a proper exception class for ResponseError
+        # so that `except ollama_module.ResponseError` works in the code
+        class MockResponseError(Exception):
+            pass
+
+        mock_ollama.ResponseError = MockResponseError
 
         with patch.dict("sys.modules", {"ollama": mock_ollama}):
             with pytest.raises(RuntimeError) as exc_info:
@@ -240,7 +248,7 @@ class TestMediaLLMCommandGeneration:
         with patch("mediallm.core.llm.OllamaAdapter"):
             mediallm = MediaLLM()
 
-            with pytest.raises(ValueError, match="Request cannot be empty"):
+            with pytest.raises(ValidationError, match="Request cannot be empty"):
                 mediallm.generate_command("")
 
     def test_generate_command_too_long(self):
@@ -249,7 +257,7 @@ class TestMediaLLMCommandGeneration:
             mediallm = MediaLLM()
             long_request = "a" * 10001  # Exceeds 10000 character limit
 
-            with pytest.raises(ValueError, match="Request too long"):
+            with pytest.raises(ValidationError, match="Request too long"):
                 mediallm.generate_command(long_request)
 
     def test_generate_command_translation_error(self, mock_discover_media, mock_ollama_adapter, sample_workspace):
@@ -305,7 +313,7 @@ class TestMediaLLMCommandGeneration:
                             side_effect=Exception("Dispatch failed"),
                         ):
                             mediallm = MediaLLM()
-                            with pytest.raises(RuntimeError, match="Failed to generate commands"):
+                            with pytest.raises(RuntimeError, match="Failed to generate plan"):
                                 mediallm.generate_command("convert video")
 
 
@@ -460,22 +468,29 @@ class TestErrorHandling:
         mock_ollama = Mock()
         mock_ollama.Client.side_effect = RuntimeError("Ollama not running")
 
+        # Create a proper exception class for ResponseError
+        # so that `except ollama_module.ResponseError` works in the code
+        class MockResponseError(Exception):
+            pass
+
+        mock_ollama.ResponseError = MockResponseError
+
         with patch.dict("sys.modules", {"ollama": mock_ollama}):
             with pytest.raises(RuntimeError, match="Failed to initialize Ollama provider"):
                 MediaLLM()._get_llm()
 
     def test_value_error_validation(self):
-        """Test ValueError for invalid inputs."""
+        """Test ValidationError for invalid inputs."""
         with patch("mediallm.core.llm.OllamaAdapter"):
             mediallm = MediaLLM()
 
             # Test empty request
-            with pytest.raises(ValueError, match="Request cannot be empty"):
+            with pytest.raises(ValidationError, match="Request cannot be empty"):
                 mediallm.generate_command("")
 
             # Test too long request
             long_request = "x" * 10001
-            with pytest.raises(ValueError, match="Request too long"):
+            with pytest.raises(ValidationError, match="Request too long"):
                 mediallm.generate_command(long_request)
 
     def test_exception_chaining(self, mock_discover_media, mock_ollama_adapter, sample_workspace):

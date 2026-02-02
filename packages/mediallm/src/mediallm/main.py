@@ -76,9 +76,6 @@ def main() -> None:
 
 def _validate_environment() -> None:
     """Validate basic environment requirements."""
-    # Check Python version
-
-    # Check for required modules
     _check_required_modules()
 
 

@@ -134,8 +134,6 @@ class MediaIntent(BaseModel):
         if "glob" in values and values.get("glob") is not None:
             values["glob"] = str(values["glob"])
 
-        return values
-
     @model_validator(mode="after")
     def _validate(self) -> MediaIntent:
         """Post-validation checks for action-specific requirements."""

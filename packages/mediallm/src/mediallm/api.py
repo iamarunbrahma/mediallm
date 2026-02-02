@@ -75,6 +75,15 @@ class MediaLLM:
         """Get the timeout value."""
         return self._timeout
 
+    @property
+    def workspace(self) -> dict[str, Any]:
+        """Get the cached workspace data, scanning lazily if needed.
+
+        Returns:
+            Dictionary containing discovered media files.
+        """
+        return self._ensure_workspace()
+
     def get_workspace(self) -> dict[str, Any]:
         """Get the cached workspace data.
 
@@ -138,6 +147,11 @@ class MediaLLM:
         except ImportError as e:
             raise ConfigError(
                 "Ollama package not installed. Please install it: pip install ollama"
+            ) from e
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to initialize Ollama provider: {e}. "
+                "Please ensure Ollama is running: ollama serve"
             ) from e
 
     def _validate_request(self, request: str) -> None:

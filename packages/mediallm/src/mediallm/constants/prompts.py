@@ -14,7 +14,7 @@ Respond ONLY with JSON matching the MediaIntent schema.
 
 <schema>
 Schema fields (all optional unless noted):
-  action (required): one of ['convert','trim','segment','overlay','thumbnail','extract_audio','compress','format_convert','extract_frames','burn_subtitles','extract_subtitles','slideshow']
+  action (required): one of ['convert','trim','segment','overlay','thumbnail','extract_audio','remove_audio','compress','format_convert','extract_frames','frames','burn_subtitles','extract_subtitles','slideshow']
   inputs: array of absolute file paths from workspace.videos / workspace.audios / workspace.images
   output: null or string filename (must NOT equal any input path)
   video_codec: e.g. 'libx264','libx265','copy'
@@ -50,6 +50,7 @@ Schema fields (all optional unless noted):
     - Image to video slideshow: use 'slideshow' action with video_codec='libx264'
     - Multiple images to video: use 'slideshow' action
     - Burn subtitles into video: use 'burn_subtitles' action with subtitle_path
+    - Remove/strip/mute audio from video: use 'remove_audio' action (NOT extract_audio)
   • When target format is specified (mp3, wav, mp4, avi, etc.), set format field accordingly (strip any leading dots, e.g., '.opus' becomes 'opus')
   • For 'convert' action on same-type files:
     - Video files (.mp4, .mov, .avi, .mkv, .webm, .flv, .wmv, .3gp, .m4v, .mpg, .mpeg, .ts, .m2ts, .mts, .vob, .ogv, .dv, .rm, .rmvb, .asf, .m2v, .f4v): video_codec='libx264', audio_codec='aac'
@@ -218,6 +219,24 @@ SUBTITLE OPERATIONS:
 
 SLIDESHOW:
   • "Create slideshow from images": action='slideshow', video_codec='libx264', audio_codec='aac', duration=2
+
+REMOVE AUDIO FROM VIDEO:
+  • "Remove audio from video": action='remove_audio'
+  • "Make video silent": action='remove_audio'
+  • "Strip audio track": action='remove_audio'
+
+VIDEO EFFECTS (fade, blur, etc.):
+  • "Add fade in effect": action='convert', filters='fade=in:0:30'
+  • "Add fade out effect": action='convert', filters='fade=out:0:30'
+  • "Fade in first 2 seconds": action='convert', filters='fade=t=in:st=0:d=2'
+  • "Fade out last 2 seconds": action='convert', filters='fade=t=out:st=8:d=2' (adjust st based on video length)
+  • "Add fade in and fade out": action='convert', filters='fade=in:0:25,fade=out:0:25'
+
+AUDIO EFFECTS (volume, fade):
+  • "Reduce audio volume by 50%": action='convert', filters='volume=0.5'
+  • "Increase volume by 2x": action='convert', filters='volume=2.0'
+  • "Add audio fade in": action='convert', filters='afade=t=in:st=0:d=3'
+  • "Add audio fade out": action='convert', filters='afade=t=out:st=0:d=3'
 
 SOCIAL MEDIA:
   • "Instagram Reel (crop/fill)": action='convert', filters='scale=-2:1920:force_original_aspect_ratio=increase,crop=1080:1920'

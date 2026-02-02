@@ -122,6 +122,25 @@ ffmpeg -i video.mp4 -f null - 2>&1 | grep -i error
 - Process smaller segments for testing
 - Ensure adequate disk space
 
+## Known Limitations
+
+Some operations may not work as expected depending on the LLM model:
+
+### Operations with Limited Support
+
+- **GIF creation**: May fail with "translation error" due to complex filter requirements
+- **Batch operations**: "convert all X to Y" may produce malformed commands
+- **Advanced filters**: Fade effects, volume adjustments, and crop/scale filters may not be applied
+- **Format-specific conversions**: Some audio format conversions (e.g., MP3 to FLAC) may not output the expected format
+
+### Workarounds
+
+For advanced operations, try:
+1. Be very specific: "convert video.mp4 to animated GIF output.gif"
+2. Use simpler commands and chain them manually
+3. Use `--dry-run` to preview and manually adjust commands
+4. Consider using a more capable model like `llama3.1:8b` or larger
+
 ## Getting Help
 
 If issues persist:

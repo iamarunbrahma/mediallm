@@ -14,6 +14,7 @@ from mediallm.interface.terminal_interface import app
 from mediallm.utils.data_models import Action
 from mediallm.utils.data_models import MediaIntent
 from mediallm.utils.exceptions import TranslationError
+from mediallm.utils.exceptions import ValidationError
 
 
 class TestMainEntryPoint:
@@ -294,6 +295,13 @@ class TestMediaLLMAPI:
         mock_ollama = Mock()
         mock_ollama.Client.side_effect = Exception("Connection failed")
 
+        # Create a proper exception class for ResponseError
+        # so that `except ollama_module.ResponseError` works in the code
+        class MockResponseError(Exception):
+            pass
+
+        mock_ollama.ResponseError = MockResponseError
+
         with patch.dict("sys.modules", {"ollama": mock_ollama}):
             with pytest.raises(RuntimeError) as exc_info:
                 MediaLLM()._get_llm()
@@ -391,7 +399,7 @@ class TestMediaLLMAPI:
         with patch("mediallm.core.llm.OllamaAdapter"):
             mediallm = MediaLLM()
 
-            with pytest.raises(ValueError, match="Request cannot be empty"):
+            with pytest.raises(ValidationError, match="Request cannot be empty"):
                 mediallm.generate_command("")
 
     def test_generate_command_too_long(self):
@@ -400,7 +408,7 @@ class TestMediaLLMAPI:
             mediallm = MediaLLM()
             long_request = "a" * 10001  # Exceeds 10000 character limit
 
-            with pytest.raises(ValueError, match="Request too long"):
+            with pytest.raises(ValidationError, match="Request too long"):
                 mediallm.generate_command(long_request)
 
     def test_scan_workspace(self, mock_discover_media, sample_workspace):
