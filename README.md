@@ -56,7 +56,7 @@ Whether you're a developer automating video workflows, a content creator resizin
 
 | Component | Version | macOS | Linux |
 |-----------|---------|-------|-------|
-| Python | 3.10+ | `brew install python` | `sudo apt install python3` |
+| Python | 3.10–3.15 | `brew install python` | `sudo apt install python3` |
 | FFmpeg | Latest | `brew install ffmpeg` | `sudo apt install ffmpeg` |
 | Ollama | Latest | `brew install ollama` | curl -fsSL https://ollama.com/install.sh | sh |
 

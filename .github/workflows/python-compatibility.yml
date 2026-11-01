@@ -1,0 +1,29 @@
+name: Python compatibility
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  install-and-smoke-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
+    defaults:
+      run:
+        working-directory: packages/mediallm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: Create an isolated Python environment
+        run: uv venv --python "${{ matrix.python }}"
+      - name: Install the package and test dependencies
+        run: uv pip install -e . pytest==9.2.0 pytest-timeout==2.3.1
+      - name: Check the test suite, CLI startup, and Pydantic schemas
+        run: .venv/bin/python -m pytest tests/

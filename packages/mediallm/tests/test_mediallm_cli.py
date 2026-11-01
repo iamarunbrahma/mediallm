@@ -70,9 +70,9 @@ class TestCLICommands:
 
     def test_cli_no_arguments(self, cli_runner, mock_discover_media, mock_command_executor):
         """Test CLI without arguments enters interactive mode."""
-        with patch("mediallm.interface.command_handlers.nl_command"):
+        with patch("mediallm.interface.terminal_interface.nl_command") as mock_nl_command:
             with patch("mediallm.interface.command_handlers._run_interactive_session"):
-                with patch("mediallm.utils.config.load_config") as mock_config:
+                with patch("mediallm.interface.terminal_interface.load_config") as mock_config:
                     mock_config.return_value = Mock(
                         model_name="llama3.1:latest",
                         dry_run=False,
@@ -83,6 +83,8 @@ class TestCLICommands:
                     )
                     result = cli_runner.invoke(app, [])
                     assert result.exit_code == 0
+                    mock_nl_command.assert_called_once()
+                    assert mock_nl_command.call_args.kwargs["prompt"] is None
 
     def test_cli_with_prompt_argument(
         self,
@@ -105,7 +107,7 @@ class TestCLICommands:
                 "mediallm.interface.confirm_dialog.confirm_prompt",
                 return_value=True,
             ),
-            patch("mediallm.utils.config.load_config") as mock_config,
+            patch("mediallm.interface.terminal_interface.load_config") as mock_config,
         ):
             mock_config.return_value = Mock(
                 model_name="llama3.1:latest",
@@ -214,7 +216,7 @@ class TestCLICommands:
                 "mediallm.interface.confirm_dialog.confirm_prompt",
                 return_value=True,
             ),
-            patch("mediallm.utils.config.load_config") as mock_config,
+            patch("mediallm.interface.terminal_interface.load_config") as mock_config,
         ):
             mock_config.return_value = Mock(
                 model_name="llama3.1:latest",
@@ -227,6 +229,7 @@ class TestCLICommands:
             )
             result = cli_runner.invoke(app, cli_args)
             assert result.exit_code == 0
+            mock_config.assert_called_once_with()
 
     def test_cli_keyboard_interrupt(self, cli_runner):
         """Test CLI handles keyboard interrupt gracefully."""
@@ -550,7 +553,7 @@ class TestErrorHandling:
         mock_ollama_adapter.process_query.side_effect = TranslationError("Cannot understand request")
 
         with patch.dict("sys.modules", {"ollama": mock_ollama}):
-            with patch("mediallm.utils.config.load_config") as mock_config:
+            with patch("mediallm.interface.terminal_interface.load_config") as mock_config:
                 mock_config.return_value = Mock(
                     model_name="llama3.1:latest",
                     ollama_host="http://localhost:11434",
@@ -566,7 +569,7 @@ class TestErrorHandling:
         """Test configuration error handling."""
         from mediallm.utils.exceptions import ConfigError
 
-        with patch("mediallm.utils.config.load_config", side_effect=ConfigError("Config error")):
+        with patch("mediallm.interface.terminal_interface.load_config", side_effect=ConfigError("Config error")):
             result = cli_runner.invoke(app, ["test"])
             assert result.exit_code == 1
 
@@ -576,7 +579,7 @@ class TestErrorHandling:
         mock_ollama.Client.side_effect = RuntimeError("Ollama not running")
 
         with patch.dict("sys.modules", {"ollama": mock_ollama}):
-            with patch("mediallm.utils.config.load_config") as mock_config:
+            with patch("mediallm.interface.terminal_interface.load_config") as mock_config:
                 mock_config.return_value = Mock(
                     model_name="llama3.1:latest",
                     ollama_host="http://localhost:11434",
@@ -616,7 +619,7 @@ class TestFileReferences:
                     "mediallm.interface.confirm_dialog.confirm_prompt",
                     return_value=True,
                 ),
-                patch("mediallm.utils.config.load_config") as mock_config,
+                patch("mediallm.interface.terminal_interface.load_config") as mock_config,
             ):
                 mock_config.return_value = Mock(
                     model_name="llama3.1:latest",
@@ -633,7 +636,7 @@ class TestFileReferences:
     def test_file_validation(self, cli_runner):
         """Test file validation for non-media files."""
         with patch("mediallm.interface.file_utils.validate_non_media_files_in_input") as mock_validate:
-            with patch("mediallm.utils.config.load_config") as mock_config:
+            with patch("mediallm.interface.terminal_interface.load_config") as mock_config:
                 mock_config.return_value = Mock(
                     model_name="llama3.1:latest",
                     dry_run=False,
@@ -686,7 +689,7 @@ class TestCommandBuilding:
 
         with patch.dict("sys.modules", {"ollama": mock_ollama}):
             with patch("mediallm.interface.confirm_dialog.confirm_prompt", return_value=True):
-                with patch("mediallm.utils.config.load_config") as mock_config:
+                with patch("mediallm.interface.terminal_interface.load_config") as mock_config:
                     mock_config.return_value = Mock(
                         model_name="llama3.1:latest",
                         ollama_host="http://localhost:11434",
@@ -713,7 +716,7 @@ class TestCommandBuilding:
 
         with patch.dict("sys.modules", {"ollama": mock_ollama}):
             with patch("mediallm.interface.confirm_dialog.confirm_prompt", return_value=True):
-                with patch("mediallm.utils.config.load_config") as mock_config:
+                with patch("mediallm.interface.terminal_interface.load_config") as mock_config:
                     mock_config.return_value = Mock(
                         model_name="llama3.1:latest",
                         ollama_host="http://localhost:11434",
@@ -785,7 +788,7 @@ def test_end_to_end_workflow(
         ),
         patch("mediallm.interface.confirm_dialog.confirm_prompt", return_value=True),
     ):
-        with patch("mediallm.utils.config.load_config") as mock_config:
+        with patch("mediallm.interface.terminal_interface.load_config") as mock_config:
             mock_config.return_value = Mock(
                 model_name="llama3.1:latest",
                 ollama_host="http://localhost:11434",

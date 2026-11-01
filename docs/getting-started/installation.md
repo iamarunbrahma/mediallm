@@ -30,6 +30,21 @@ You need three components:
 pip install mediallm
 ```
 
+### Install this checkout with Python 3.10–3.15
+
+From the repository root, install the CLI with uv:
+
+```bash
+uv tool install --python 3.14 ./packages/mediallm
+mediallm --help
+```
+
+Select any Python version from 3.10 through 3.15 using `--python`.
+Python 3.14 and 3.15 require the updated Pydantic dependency in this checkout.
+Older releases pinned to Pydantic 2.11.0 can fail while building
+`pydantic-core` with a PyO3 Python-version compatibility error. Install the
+local package above to use this fix until it is included in a PyPI release.
+
 For MCP server integration:
 ```bash
 pip install mediallm-mcp
